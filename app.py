@@ -22,9 +22,11 @@ fuso_brasilia = timezone(timedelta(hours=-3))
 if 'chassis' not in st.session_state:
     st.session_state.chassis = []
 if 'auto_register' not in st.session_state:
-    st.session_state.auto_register = False
+    st.session_state.auto_register = True  # Agora é automático por padrão
 if 'last_chassi' not in st.session_state:
     st.session_state.last_chassi = ""
+if 'focus_field' not in st.session_state:
+    st.session_state.focus_field = False
 
 def conectar_banco():
     """Conecta ao banco Neon"""
@@ -87,17 +89,15 @@ def main():
         
         st.divider()
         
-        # Modo de leitura automática - AGORA VISÍVEL NA SIDEBAR
-        st.session_state.auto_register = st.checkbox(
-            "🔴 Modo Leitor de Código de Barras", 
-            value=st.session_state.auto_register,
-            help="Ative para gravação automática ao ler código de barras"
-        )
+        # Modo de leitura automática - SEMPRE ATIVO (removido o checkbox)
+        st.info("🔴 **Modo Leitor Ativo**")
+        st.caption("Gravação automática ao ler código de barras")
         
         # Botão de nova contagem
         if st.button("🔄 Nova Contagem", use_container_width=True, type="secondary"):
             st.session_state.chassis = []
             st.session_state.last_chassi = ""
+            st.session_state.focus_field = True
             st.rerun()
         
         st.divider()
@@ -113,6 +113,25 @@ def main():
     # Área principal - Formulário de chassis
     st.header("📝 Registrar Chassi")
     
+    # JavaScript para focar automaticamente no campo
+    if st.session_state.focus_field:
+        st.markdown("""
+        <script>
+            function focusChassiField() {
+                const input = document.querySelector('input[placeholder*="leitor"]');
+                if (input) {
+                    input.focus();
+                    input.select();
+                }
+            }
+            // Tenta focar imediatamente e também após um pequeno delay
+            focusChassiField();
+            setTimeout(focusChassiField, 100);
+            setTimeout(focusChassiField, 500);
+        </script>
+        """, unsafe_allow_html=True)
+        st.session_state.focus_field = False
+    
     # Container para o campo de chassi
     chassi_container = st.container()
     
@@ -120,50 +139,45 @@ def main():
         # Campo de chassi com key única para forçar limpeza
         chassi = st.text_input(
             "Digite o número do chassi ou use leitor de código de barras:",
-            placeholder="Posicione o leitor aqui...",
+            placeholder="Posicione o leitor aqui... (campo com foco automático)",
             key=f"chassi_input_{len(st.session_state.chassis)}",  # Key dinâmica para forçar limpeza
             label_visibility="visible"
         )
     
-    # Verifica se há um novo chassi para registrar (modo automático)
-    if (st.session_state.auto_register and 
-        chassi and 
+    # Verifica se há um novo chassi para registrar (modo automático SEMPRE ATIVO)
+    if (chassi and 
         chassi.strip() and 
         chassi != st.session_state.last_chassi):
         
         st.session_state.last_chassi = chassi
         registrar_chassi(chassi.strip())
+        # Marca para focar no campo após o rerun
+        st.session_state.focus_field = True
         # Força o rerun para limpar o campo
         st.rerun()
     
-    # Botão adicionar manual (só aparece se o modo automático estiver desativado)
-    if not st.session_state.auto_register:
-        col1, col2 = st.columns([3, 1])
-        with col2:
-            if st.button("➕ ADICIONAR CHASSI", type="primary", use_container_width=True):
-                if chassi:
-                    registrar_chassi(chassi.strip())
-                    # Força o rerun para limpar o campo
-                    st.rerun()
-                else:
-                    st.warning("⚠️ Digite um número de chassi")
+    # Botão adicionar manual (só para backup)
+    col1, col2 = st.columns([3, 1])
+    with col2:
+        if st.button("➕ ADICIONAR MANUAL", type="secondary", use_container_width=True):
+            if chassi:
+                registrar_chassi(chassi.strip())
+                # Marca para focar no campo após o rerun
+                st.session_state.focus_field = True
+                # Força o rerun para limpar o campo
+                st.rerun()
+            else:
+                st.warning("⚠️ Digite um número de chassi")
 
     # Instruções para uso com leitor de código de barras
-    if st.session_state.auto_register:
-        st.success("""
-        **🎯 Modo Leitor de Código de Barras ATIVADO**
-        - Posicione o leitor no campo acima
-        - A gravação será **automática** a cada leitura
-        - O campo será **limpo automaticamente** após cada registro
-        - Continue lendo os próximos códigos
-        """)
-    else:
-        st.info("""
-        **📋 Modo Manual:**
-        - Digite o chassi no campo acima
-        - Clique em **ADICIONAR CHASSI**
-        - Ou **ative o modo leitor de código de barras** na sidebar para leitura automática
-        """)
+    st.success("""
+    **🎯 Modo Leitor de Código de Barras ATIVADO**
+    - Posicione o leitor no campo acima
+    - O campo **já está com foco automático**
+    - A gravação será **automática** a cada leitura
+    - O campo será **limpo automaticamente** após cada registro
+    - Continue lendo os próximos códigos
+    """)
 
     # Lista de chassis registrados
     if st.session_state.chassis:
