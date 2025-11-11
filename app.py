@@ -68,16 +68,6 @@ def main():
     
     st.divider()
     
-    # CAMPO INVISÍVEL NO INÍCIO para receber o foco primeiro
-    st.markdown("""
-    <input 
-        type="text" 
-        id="first_focus" 
-        style="position: absolute; left: -1000px; width: 1px; height: 1px; opacity: 0;"
-        autofocus
-    />
-    """, unsafe_allow_html=True)
-    
     # Área principal - Formulário de chassis
     st.header("📝 Registrar Chassi")
     
@@ -88,56 +78,29 @@ def main():
         # Campo de chassi com key dinâmica
         chassi = st.text_input(
             "Digite o número do chassi ou use leitor de código de barras:",
-            placeholder="⬅️ POSICIONE O LEITOR AQUI - CAMPO COM FOCO AUTOMÁTICO",
+            placeholder="⬅️ POSICIONE O LEITOR AQUI - PRESSIONE 'FOCO NO CAMPO' ABAIXO",
             key=f"chassi_input_{st.session_state.input_key}",
             label_visibility="visible"
         )
     
-    # JAVASCRIPT QUE SIMULA O TAB AUTOMATICAMENTE
-    st.markdown("""
-    <script>
-        function simulateTabToChassiField() {
-            // Foca no campo invisível primeiro
-            const firstField = document.getElementById('first_focus');
-            if (firstField) {
-                firstField.focus();
-                
-                // Simula pressionar Tab para ir para o próximo campo (o campo de chassi)
-                setTimeout(() => {
-                    const tabEvent = new KeyboardEvent('keydown', {
-                        key: 'Tab',
-                        code: 'Tab',
-                        keyCode: 9,
-                        which: 9,
-                        bubbles: true
-                    });
-                    
-                    firstField.dispatchEvent(tabEvent);
-                    
-                    // Depois do Tab, foca e seleciona o campo de chassi
-                    setTimeout(() => {
-                        const inputs = document.querySelectorAll('input[type="text"]');
-                        // Pega o segundo input (o primeiro é o invisível, o segundo é o campo de chassi)
-                        if (inputs.length > 1) {
-                            inputs[1].focus();
-                            inputs[1].select();
-                            console.log('Campo de chassi focado via Tab simulation');
-                        }
-                    }, 50);
-                }, 100);
-            }
-        }
-        
-        // Executa quando a página carrega
-        setTimeout(simulateTabToChassiField, 100);
-        setTimeout(simulateTabToChassiField, 500);
-        setTimeout(simulateTabToChassiField, 1000);
-        
-        // Executa após cada registro (quando a página recarrega)
-        window.addEventListener('load', simulateTabToChassiField);
-        
-    </script>
-    """, unsafe_allow_html=True)
+    # Botão para focar no campo - SOLUÇÃO PRÁTICA
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        if st.button("🎯 FOCO NO CAMPO DE CHASSI", use_container_width=True, type="primary"):
+            # JavaScript simples para focar no campo
+            st.markdown("""
+            <script>
+                const inputs = document.querySelectorAll('input[type="text"]');
+                for (let input of inputs) {
+                    if (input.placeholder && input.placeholder.includes('leitor')) {
+                        input.focus();
+                        input.select();
+                        break;
+                    }
+                }
+            </script>
+            """, unsafe_allow_html=True)
+            st.success("Campo pronto para leitura! Posicione o leitor.")
     
     # Verifica se há um novo chassi para registrar (modo automático)
     if (chassi and 
@@ -152,17 +115,17 @@ def main():
         st.rerun()
 
     # Instruções para uso com leitor de código de barras
-    st.success("""
-    **🎯 MODO LEITOR DE CÓDIGO DE BARRAS ATIVADO**
+    st.info("""
+    **📋 MODO DE USO:**
     
-    **→ POSICIONE O LEITOR NO CAMPO ACIMA ←**
+    1. **Clique em 🎯 FOCO NO CAMPO DE CHASSI**
+    2. **Posicione o leitor no campo acima**
+    3. **Leia o código de barras** (gravação automática)
+    4. **Repita os passos 1-3** para cada chassi
     
-    - ✅ **Foco automático** no campo
     - ✅ **Gravação automática** a cada leitura  
     - ✅ **Campo limpo** após cada registro
     - ✅ **Pronto para próxima leitura**
-    
-    *O campo já está selecionado e aguardando a leitura...*
     """)
 
     # Sidebar FIXA
