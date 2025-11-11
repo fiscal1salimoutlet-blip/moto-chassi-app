@@ -10,7 +10,7 @@ from email.mime.text import MIMEText
 from email import encoders
 
 st.set_page_config(
-    page_title="Salim Outlet - Controle de Chassi", 
+    page_title="Salim Outlet - Controle de Motos", 
     layout="wide",
     initial_sidebar_state="expanded"  # Sidebar sempre visível
 )
@@ -63,7 +63,7 @@ def main():
         
         # Campo para nome do operador
         operador = st.text_input(
-            "👤 Nome do Operador:",
+            "🏪 Loja:",
             placeholder="Digite seu nome",
             key="operador_input"
         )
@@ -142,7 +142,7 @@ def main():
         # Tela inicial quando não há chassis
         st.info("""
         **📋 Como usar:**
-        1. **👤 Digite seu nome** na sidebar
+        1. **🏪 Digite a sua loja ** na sidebar
         2. **📝 Digite o chassi** no campo acima  
         3. **🔄 Clique em ADICIONAR CHASSI**
         4. **📋 Acompanhe a lista** que vai aparecer
