@@ -50,7 +50,8 @@ def main():
     
     # Sidebar FIXA
     with st.sidebar:
-        # REMOVIDO: Logo na sidebar
+        # Logo na sidebar (MANTIDO)
+        st.image("salimoutlet.jpg", width=100)
         # REMOVIDO: "Salim Outlet" abaixo do logo
         
         st.divider()
