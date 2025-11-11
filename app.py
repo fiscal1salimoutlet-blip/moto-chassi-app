@@ -71,81 +71,108 @@ def main():
     # Área principal - Formulário de chassis PRIMEIRO
     st.header("📝 Registrar Chassi")
     
-    # Container para o campo de chassi - AGORA É O PRIMEIRO ELEMENTO
-    chassi_container = st.container()
+    # CAMPO PERSONALIZADO COM AUTOFOCUS NATIVO
+    st.markdown("""
+    <div style="margin-bottom: 20px;">
+        <label style="font-weight: bold; display: block; margin-bottom: 8px;">
+            Digite o número do chassi ou use leitor de código de barras:
+        </label>
+        <input 
+            type="text" 
+            id="chassi_input" 
+            placeholder="⬅️ POSICIONE O LEITOR AQUI - CAMPO COM FOCO AUTOMÁTICO" 
+            style="width: 100%; padding: 10px; font-size: 16px; border: 2px solid #4CAF50; border-radius: 5px;"
+            autofocus
+        />
+    </div>
+    """, unsafe_allow_html=True)
     
-    with chassi_container:
-        # Campo de chassi com key dinâmica
-        chassi = st.text_input(
-            "Digite o número do chassi ou use leitor de código de barras:",
-            placeholder="⬅️ POSICIONE O LEITOR AQUI - CAMPO COM FOCO AUTOMÁTICO",
-            key=f"chassi_input_{st.session_state.input_key}",
-            label_visibility="visible"
-        )
-    
-    # JavaScript SUPER AGRESSIVO para foco
+    # JavaScript para garantir o foco
     st.markdown("""
     <script>
-        function focusChassiField() {
-            // Método 1: Procura por input com placeholder específico
-            let inputs = document.querySelectorAll('input');
-            for (let i = 0; i < inputs.length; i++) {
-                if (inputs[i].placeholder && inputs[i].placeholder.includes('leitor')) {
-                    inputs[i].focus();
-                    inputs[i].select();
-                    console.log('Método 1: Focado pelo placeholder');
-                    return true;
+        // Foca no campo imediatamente
+        document.getElementById('chassi_input').focus();
+        document.getElementById('chassi_input').select();
+        
+        // Foca novamente a cada 100ms por 2 segundos
+        let focusInterval = setInterval(function() {
+            const field = document.getElementById('chassi_input');
+            if (field) {
+                field.focus();
+                field.select();
+            }
+        }, 100);
+        
+        // Para o intervalo após 2 segundos
+        setTimeout(function() {
+            clearInterval(focusInterval);
+        }, 2000);
+        
+        // Também foca quando a página é clicada em qualquer lugar
+        document.addEventListener('click', function() {
+            setTimeout(function() {
+                const field = document.getElementById('chassi_input');
+                if (field) {
+                    field.focus();
+                    field.select();
                 }
-            }
-            
-            // Método 2: Procura pelo primeiro input de texto
-            inputs = document.querySelectorAll('input[type="text"]');
-            if (inputs.length > 0) {
-                inputs[0].focus();
-                inputs[0].select();
-                console.log('Método 2: Focado no primeiro input de texto');
-                return true;
-            }
-            
-            // Método 3: Procura por qualquer input
-            inputs = document.querySelectorAll('input');
-            if (inputs.length > 0) {
-                inputs[0].focus();
-                inputs[0].select();
-                console.log('Método 3: Focado no primeiro input geral');
-                return true;
-            }
-            
-            console.log('Nenhum input encontrado');
-            return false;
-        }
-        
-        // Executa AGressivamente várias vezes
-        setTimeout(focusChassiField, 50);
-        setTimeout(focusChassiField, 150);
-        setTimeout(focusChassiField, 300);
-        setTimeout(focusChassiField, 500);
-        setTimeout(focusChassiField, 1000);
-        setTimeout(focusChassiField, 2000);
-        
-        // Também executa quando a página carrega completamente
-        window.addEventListener('load', function() {
-            setTimeout(focusChassiField, 100);
+            }, 10);
         });
+    </script>
+    """, unsafe_allow_html=True)
+    
+    # Pegar o valor do campo personalizado
+    chassi_value = st.text_input(
+        "Campo oculto para capturar valor:",
+        key=f"chassi_hidden_{st.session_state.input_key}",
+        label_visibility="collapsed"
+    )
+    
+    # JavaScript para copiar valor do campo personalizado para o campo do Streamlit
+    st.markdown(f"""
+    <script>
+        // Função para copiar o valor do campo personalizado para o campo do Streamlit
+        function syncChassiValue() {{
+            const customField = document.getElementById('chassi_input');
+            const streamlitField = document.querySelector('input[type="text"]');
+            
+            if (customField && streamlitField && customField.value !== streamlitField.value) {{
+                streamlitField.value = customField.value;
+                
+                // Dispara evento de input para o Streamlit detectar a mudança
+                const event = new Event('input', {{ bubbles: true }});
+                streamlitField.dispatchEvent(event);
+            }}
+        }}
         
+        // Sincroniza a cada 500ms
+        setInterval(syncChassiValue, 500);
+        
+        // Também sincroniza quando o campo personalizado perde o foco
+        document.getElementById('chassi_input').addEventListener('blur', syncChassiValue);
     </script>
     """, unsafe_allow_html=True)
     
     # Verifica se há um novo chassi para registrar (modo automático)
-    if (chassi and 
-        chassi.strip() and 
-        chassi != st.session_state.last_chassi):
+    if (chassi_value and 
+        chassi_value.strip() and 
+        chassi_value != st.session_state.last_chassi):
         
-        st.session_state.last_chassi = chassi
-        registrar_chassi(chassi.strip())
+        st.session_state.last_chassi = chassi_value
+        registrar_chassi(chassi_value.strip())
         # Incrementa a key para forçar novo campo limpo
         st.session_state.input_key += 1
-        # Força o rerun para limpar o campo
+        
+        # JavaScript para limpar o campo personalizado após o registro
+        st.markdown("""
+        <script>
+            document.getElementById('chassi_input').value = '';
+            document.getElementById('chassi_input').focus();
+            document.getElementById('chassi_input').select();
+        </script>
+        """, unsafe_allow_html=True)
+        
+        # Força o rerun para limpar o campo hidden
         st.rerun()
 
     # Instruções para uso com leitor de código de barras
@@ -162,7 +189,7 @@ def main():
     *O campo já está selecionado e aguardando a leitura...*
     """)
 
-    # Sidebar FIXA - MOVIDA PARA DEPOIS DO CAMPO PRINCIPAL
+    # Sidebar FIXA
     with st.sidebar:
         # Logo na sidebar (MANTIDO)
         st.image("salimoutlet.jpg", width=100)
