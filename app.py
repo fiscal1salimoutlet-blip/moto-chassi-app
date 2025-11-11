@@ -39,9 +39,9 @@ def conectar_banco():
         return None
 
 def main():
-    # Cabeçalho usando markdown do Streamlit
+    # Cabeçalho com cor AMARELO OURO
     st.markdown(
-        "<h1 style='color: #2e86ab; margin-bottom: 20px;'>Salim Outlet - Controle de Scooters</h1>",
+        "<h1 style='color: #FFD700; margin-bottom: 20px; font-size: 2.5rem;'>Salim Outlet - Controle de Scooters</h1>",
         unsafe_allow_html=True
     )
     
@@ -51,7 +51,6 @@ def main():
     with st.sidebar:
         # Logo na sidebar (MANTIDO)
         st.image("salimoutlet.jpg", width=100)
-        # REMOVIDO: "Salim Outlet" abaixo do logo
         
         st.divider()
         
@@ -82,6 +81,7 @@ def main():
                 else:
                     st.warning("⚠️ Digite o nome da loja")
 
+    # Resto do código permanece igual...
     # Área principal - Formulário de chassis
     st.header("📝 Registrar Chassi")
     
