@@ -111,51 +111,48 @@ def main():
     # Área principal - Formulário de chassis
     st.header("📝 Registrar Chassi")
     
-    # JavaScript para auto-foco - ABORDAGEM DIRETA
+    # JavaScript que simula Tab - SOLUÇÃO DEFINITIVA
     st.markdown("""
     <script>
-        function focusChassiField() {
-            // Procura por todos os inputs
-            const inputs = document.querySelectorAll('input');
-            let found = false;
+        function simulateTab() {
+            // Cria e dispara um evento Tab
+            const tabEvent = new KeyboardEvent('keydown', {
+                key: 'Tab',
+                code: 'Tab',
+                keyCode: 9,
+                which: 9,
+                bubbles: true
+            });
             
-            for (let input of inputs) {
-                // Tenta encontrar pelo tipo text
-                if (input.type === 'text') {
-                    // Foca no primeiro input de texto que encontrar
-                    input.focus();
-                    input.select();
-                    console.log('Focado no input:', input);
-                    found = true;
-                    break;
+            document.activeElement.dispatchEvent(tabEvent);
+            
+            // Também tenta focar diretamente no campo
+            setTimeout(() => {
+                const inputs = document.querySelectorAll('input[type="text"]');
+                if (inputs.length > 0) {
+                    // Foca no último input (geralmente é o campo de chassi)
+                    const lastInput = inputs[inputs.length - 1];
+                    lastInput.focus();
+                    lastInput.select();
+                    console.log('Campo focado via Tab simulation');
                 }
-            }
-            
-            if (!found) {
-                console.log('Nenhum input de texto encontrado');
-                // Tenta novamente depois de um tempo
-                setTimeout(focusChassiField, 200);
-            }
+            }, 100);
         }
         
-        // Executa imediatamente
-        focusChassiField();
-        
-        // E executa várias vezes com intervalos
-        setTimeout(focusChassiField, 100);
-        setTimeout(focusChassiField, 300);
-        setTimeout(focusChassiField, 500);
-        setTimeout(focusChassiField, 1000);
-        setTimeout(focusChassiField, 2000);
+        // Executa várias vezes para garantir
+        setTimeout(simulateTab, 100);
+        setTimeout(simulateTab, 300);
+        setTimeout(simulateTab, 500);
+        setTimeout(simulateTab, 1000);
         
     </script>
     """, unsafe_allow_html=True)
     
-    # Container para o campo de chassi - COM ID ESPECÍFICO
+    # Container para o campo de chassi
     chassi_container = st.container()
     
     with chassi_container:
-        # Campo de chassi com key dinâmica e atributos extras
+        # Campo de chassi com key dinâmica - ADICIONANDO AUTOFOCUS
         chassi = st.text_input(
             "Digite o número do chassi ou use leitor de código de barras:",
             placeholder="⬅️ POSICIONE O LEITOR AQUI - CAMPO COM FOCO AUTOMÁTICO",
