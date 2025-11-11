@@ -78,29 +78,29 @@ def main():
         # Campo de chassi com key dinâmica
         chassi = st.text_input(
             "Digite o número do chassi ou use leitor de código de barras:",
-            placeholder="⬅️ POSICIONE O LEITOR AQUI - PRESSIONE 'FOCO NO CAMPO' ABAIXO",
+            placeholder="⬅️ POSICIONE O LEITOR AQUI - O CAMPO ESTÁ PRONTO",
             key=f"chassi_input_{st.session_state.input_key}",
             label_visibility="visible"
         )
     
-    # Botão para focar no campo - SOLUÇÃO PRÁTICA
-    col1, col2, col3 = st.columns([1, 2, 1])
-    with col2:
-        if st.button("🎯 FOCO NO CAMPO DE CHASSI", use_container_width=True, type="primary"):
-            # JavaScript simples para focar no campo
-            st.markdown("""
-            <script>
-                const inputs = document.querySelectorAll('input[type="text"]');
-                for (let input of inputs) {
-                    if (input.placeholder && input.placeholder.includes('leitor')) {
-                        input.focus();
-                        input.select();
-                        break;
-                    }
+    # JavaScript MUITO SIMPLES - apenas tenta focar uma vez
+    st.markdown("""
+    <script>
+        // Espera a página carregar e tenta focar no campo
+        setTimeout(function() {
+            // Procura por inputs com placeholder que contenha "leitor"
+            const inputs = document.querySelectorAll('input');
+            for (let input of inputs) {
+                if (input.placeholder && input.placeholder.includes('LEITOR')) {
+                    input.focus();
+                    input.select();
+                    console.log('Campo de chassi focado');
+                    break;
                 }
-            </script>
-            """, unsafe_allow_html=True)
-            st.success("Campo pronto para leitura! Posicione o leitor.")
+            }
+        }, 1000);
+    </script>
+    """, unsafe_allow_html=True)
     
     # Verifica se há um novo chassi para registrar (modo automático)
     if (chassi and 
@@ -115,17 +115,16 @@ def main():
         st.rerun()
 
     # Instruções para uso com leitor de código de barras
-    st.info("""
-    **📋 MODO DE USO:**
+    st.success("""
+    **🎯 MODO LEITOR DE CÓDIGO DE BARRAS ATIVADO**
     
-    1. **Clique em 🎯 FOCO NO CAMPO DE CHASSI**
-    2. **Posicione o leitor no campo acima**
-    3. **Leia o código de barras** (gravação automática)
-    4. **Repita os passos 1-3** para cada chassi
+    **→ POSICIONE O LEITOR NO CAMPO ACIMA ←**
     
     - ✅ **Gravação automática** a cada leitura  
     - ✅ **Campo limpo** após cada registro
     - ✅ **Pronto para próxima leitura**
+    
+    *Dica: Se o campo não estiver com foco, clique uma vez nele e depois use o leitor.*
     """)
 
     # Sidebar FIXA
