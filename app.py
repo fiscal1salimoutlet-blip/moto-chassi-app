@@ -8,11 +8,12 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
 from email.mime.text import MIMEText
 from email import encoders
+import requests
 
 st.set_page_config(
     page_title="Controle de Chassi", 
     layout="wide",
-    initial_sidebar_state="collapsed"  # Sidebar fechada no mobile
+    initial_sidebar_state="collapsed"
 )
 
 # Fuso horário de Brasília
@@ -43,7 +44,7 @@ def conectar_banco():
 def main():
     st.title("🏍️ Controle de Chassi")
     
-    # Sidebar simplificada para mobile
+    # Sidebar
     with st.sidebar:
         st.header("⚙️ Configurações")
         loja = st.text_input("Nome da Loja", st.session_state.loja)
@@ -59,23 +60,20 @@ def main():
             st.session_state.chassis = []
             st.rerun()
     
-    # Se não tem loja definida
     if not st.session_state.loja:
         st.warning("📝 Digite o nome da loja na sidebar para começar")
         return
     
-    # 🎯 FORMULÁRIO OTIMIZADO PARA MOBILE
+    # Formulário
     st.subheader("📦 Registrar Chassi")
     
-    # Input com sugestão de câmera para mobile
     chassi = st.text_input(
         "Número do Chassi", 
         placeholder="Digite ou toque para escanear QR Code 📷",
         key="chassi_input",
-        label_visibility="collapsed"  # Esconde label para economizar espaço
+        label_visibility="collapsed"
     )
     
-    # Instruções para mobile
     st.caption("📱 **Dica:** Toque no campo acima e selecione 'Scan QR Code' para usar a câmera")
     
     col1, col2 = st.columns([1, 1])
@@ -91,7 +89,7 @@ def main():
             if st.button("📊 Ver Lista", use_container_width=True):
                 st.rerun()
 
-    # Lista de chassis (oculta por padrão no mobile para economizar espaço)
+    # Lista de chassis
     if st.session_state.chassis:
         with st.expander(f"📋 Chassis Registrados ({len(st.session_state.chassis)})", expanded=True):
             df = pd.DataFrame(st.session_state.chassis)
@@ -99,19 +97,33 @@ def main():
             
             # Botões de ação
             st.subheader("🚀 Ações")
-            col1, col2, col3 = st.columns(3)
             
-            with col1:
-                if st.button("💾 Salvar BD", use_container_width=True):
-                    salvar_contagem_banco()
+            if st.button("💾 Salvar no Banco", use_container_width=True):
+                salvar_contagem_banco()
+            
+            if st.button("📊 Gerar Excel", use_container_width=True, type="primary"):
+                finalizar_contagem()
+            
+            # Opções de Email
+            st.subheader("📧 Enviar Relatório")
+            
+            col_email1, col_email2 = st.columns(2)
+            
+            with col_email1:
+                if st.button("📧 Enviar Email Automático", use_container_width=True):
+                    enviar_email_automatico()
+            
+            with col_email2:
+                # Botão de Email Manual
+                link_email = gerar_link_email()
+                if link_email:
+                    st.markdown(
+                        f'<a href="{link_email}" target="_blank">'
+                        f'<button style="width: 100%; background-color: #4CAF50; color: white; padding: 10px; border: none; border-radius: 4px; cursor: pointer;">'
+                        f'📧 Abrir Email Pré-preenchido</button></a>',
+                        unsafe_allow_html=True
+                    )
                     
-            with col2:
-                if st.button("📧 Enviar Email", use_container_width=True):
-                    finalizar_contagem(enviar_email=True)
-                    
-            with col3:
-                if st.button("✅ Finalizar", type="primary", use_container_width=True):
-                    finalizar_contagem(enviar_email=True, salvar_banco=True)
     else:
         st.info("👆 Use o campo acima para adicionar chassis")
 
@@ -120,12 +132,10 @@ def registrar_chassi(chassi_numero):
     if not chassi_numero:
         return
         
-    # Verificar duplicado
     if any(c['chassi'] == chassi_numero for c in st.session_state.chassis):
         st.warning(f"⚠️ {chassi_numero} já registrado!")
         return
     
-    # Consultar banco
     conn = conectar_banco()
     if conn:
         try:
@@ -144,7 +154,6 @@ def registrar_chassi(chassi_numero):
                     'status': 'Encontrado'
                 }
                 st.success(f"✅ {chassi_numero}")
-                st.caption(f"{descricao}")
             else:
                 registro = {
                     'chassi': chassi_numero,
@@ -173,7 +182,6 @@ def salvar_contagem_banco():
         if conn:
             cur = conn.cursor()
             
-            # Criar tabela se não existir
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS contagens_chassi (
                     id SERIAL PRIMARY KEY,
@@ -188,7 +196,6 @@ def salvar_contagem_banco():
                 )
             """)
             
-            # Inserir cada chassi
             for chassi in st.session_state.chassis:
                 cur.execute("""
                     INSERT INTO contagens_chassi 
@@ -212,16 +219,15 @@ def salvar_contagem_banco():
     except Exception as e:
         st.error(f"❌ Erro ao salvar: {str(e)}")
 
-def finalizar_contagem(enviar_email=False, salvar_banco=False):
-    """Finaliza a contagem"""
+def finalizar_contagem():
+    """Gera e disponibiliza o Excel"""
     try:
         df = pd.DataFrame(st.session_state.chassis)
         filename = f"contagem_{st.session_state.loja}_{datetime.now(fuso_brasilia).strftime('%Y%m%d_%H%M')}.xlsx"
         df.to_excel(filename, index=False)
         
-        st.success("📊 Contagem finalizada!")
+        st.success("📊 Excel gerado com sucesso!")
         
-        # Download
         with open(filename, "rb") as f:
             st.download_button(
                 "📥 Baixar Excel",
@@ -230,52 +236,95 @@ def finalizar_contagem(enviar_email=False, salvar_banco=False):
                 "application/vnd.ms-excel",
                 use_container_width=True
             )
-        
-        if salvar_banco:
-            salvar_contagem_banco()
-        
-        if enviar_email:
-            enviar_email_func(filename)
             
     except Exception as e:
         st.error(f"❌ Erro: {str(e)}")
 
-def enviar_email_func(arquivo):
-    """Envia o arquivo por email"""
+def enviar_email_automatico():
+    """Tenta enviar email automaticamente"""
     try:
-        if not all(key in st.secrets for key in ["EMAIL_FROM", "EMAIL_PASSWORD", "EMAIL_TO"]):
-            st.warning("⚠️ Email não configurado")
-            return
-            
+        df = pd.DataFrame(st.session_state.chassis)
+        filename = f"contagem_{st.session_state.loja}_{datetime.now(fuso_brasilia).strftime('%Y%m%d_%H%M')}.xlsx"
+        df.to_excel(filename, index=False)
+        
+        # Verificar configurações
+        required_secrets = ["EMAIL_FROM", "EMAIL_PASSWORD", "EMAIL_TO", "SMTP_SERVER", "SMTP_PORT"]
+        missing_secrets = [secret for secret in required_secrets if secret not in st.secrets]
+        
+        if missing_secrets:
+            st.warning(f"⚠️ Email não configurado. Faltando: {', '.join(missing_secrets)}")
+            st.info("📧 Use o botão 'Abrir Email Pré-preenchido' abaixo")
+            return False
+        
+        # Tentar enviar
         msg = MIMEMultipart()
         msg['From'] = st.secrets["EMAIL_FROM"]
         msg['To'] = st.secrets["EMAIL_TO"]
-        msg['Subject'] = f"Contagem Chassi - {st.session_state.loja}"
+        msg['Subject'] = f"Relatório Contagem - {st.session_state.loja}"
         
         body = f"""
-        Contagem: {st.session_state.loja}
+        Relatório de Contagem de Chassi
+        
+        Loja: {st.session_state.loja}
         Data: {datetime.now(fuso_brasilia).strftime('%d/%m/%Y %H:%M')}
         Total: {len(st.session_state.chassis)}
         """
         msg.attach(MIMEText(body, 'plain'))
         
-        with open(arquivo, "rb") as f:
+        with open(filename, "rb") as f:
             part = MIMEBase('application', 'octet-stream')
             part.set_payload(f.read())
         encoders.encode_base64(part)
-        part.add_header('Content-Disposition', f'attachment; filename={arquivo}')
+        part.add_header('Content-Disposition', f'attachment; filename="{filename}"')
         msg.attach(part)
         
-        server = smtplib.SMTP(st.secrets["SMTP_SERVER"], int(st.secrets["SMTP_PORT"]))
-        server.starttls()
-        server.login(st.secrets["EMAIL_FROM"], st.secrets["EMAIL_PASSWORD"])
-        server.send_message(msg)
-        server.quit()
-        
-        st.success("✅ Email enviado!")
-        
+        # Tentar com SSL
+        try:
+            server = smtplib.SMTP_SSL(st.secrets["SMTP_SERVER"], int(st.secrets["SMTP_PORT"]))
+            server.login(st.secrets["EMAIL_FROM"], st.secrets["EMAIL_PASSWORD"])
+            server.send_message(msg)
+            server.quit()
+            st.success("✅ Email enviado com sucesso!")
+            return True
+        except:
+            # Tentar com TLS
+            server = smtplib.SMTP(st.secrets["SMTP_SERVER"], int(st.secrets["SMTP_PORT"]))
+            server.starttls()
+            server.login(st.secrets["EMAIL_FROM"], st.secrets["EMAIL_PASSWORD"])
+            server.send_message(msg)
+            server.quit()
+            st.success("✅ Email enviado com sucesso!")
+            return True
+            
     except Exception as e:
-        st.error(f"❌ Erro email: {str(e)}")
+        st.error(f"❌ Erro no email automático: {str(e)}")
+        st.info("📧 Use o botão 'Abrir Email Pré-preenchido' abaixo")
+        return False
+
+def gerar_link_email():
+    """Gera link para email pré-preenchido"""
+    if not st.session_state.chassis:
+        return None
+    
+    encontrados = len([c for c in st.session_state.chassis if c['status'] == 'Encontrado'])
+    nao_encontrados = len([c for c in st.session_state.chassis if c['status'] == 'Não encontrado'])
+    
+    assunto = f"Relatório Contagem - {st.session_state.loja}"
+    corpo = f"""Relatório de Contagem de Chassi
+
+Loja: {st.session_state.loja}
+Data: {datetime.now(fuso_brasilia).strftime('%d/%m/%Y %H:%M')}
+Total de Chassis: {len(st.session_state.chassis)}
+- Encontrados: {encontrados}
+- Não encontrados: {nao_encontrados}
+
+O arquivo Excel está em anexo.
+"""
+    
+    assunto_encoded = requests.utils.quote(assunto)
+    corpo_encoded = requests.utils.quote(corpo)
+    
+    return f"mailto:?subject={assunto_encoded}&body={corpo_encoded}"
 
 if __name__ == "__main__":
     main()
