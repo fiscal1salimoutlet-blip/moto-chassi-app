@@ -21,6 +21,8 @@ fuso_brasilia = timezone(timedelta(hours=-3))
 # Inicializar sessão
 if 'chassis' not in st.session_state:
     st.session_state.chassis = []
+if 'auto_register' not in st.session_state:
+    st.session_state.auto_register = False
 
 def conectar_banco():
     """Conecta ao banco Neon"""
@@ -83,6 +85,13 @@ def main():
         
         st.divider()
         
+        # Modo de leitura automática
+        st.session_state.auto_register = st.checkbox(
+            "🔴 Modo Leitor de Código de Barras", 
+            value=st.session_state.auto_register,
+            help="Ative para gravação automática ao ler código de barras"
+        )
+        
         # Botão de nova contagem
         if st.button("🔄 Nova Contagem", use_container_width=True, type="secondary"):
             st.session_state.chassis = []
@@ -101,18 +110,52 @@ def main():
     # Área principal - Formulário de chassis
     st.header("📝 Registrar Chassi")
     
-    chassi = st.text_input(
-        "Digite o número do chassi:",
-        placeholder="Ex: 1, 2, NVESTCASA2025030526...",
-        key="chassi_input"
-    )
+    # Container para o campo de chassi com foco automático
+    chassi_container = st.container()
     
-    # Botão adicionar
-    if st.button("➕ ADICIONAR CHASSI", type="primary", use_container_width=True):
-        if chassi:
-            registrar_chassi(chassi.strip())
-        else:
-            st.warning("⚠️ Digite um número de chassi")
+    with chassi_container:
+        # Campo de chassi com placeholder e foco
+        chassi = st.text_input(
+            "Digite o número do chassi ou use leitor de código de barras:",
+            placeholder="Posicione o leitor aqui...",
+            key="chassi_input",
+            label_visibility="visible"
+        )
+    
+    # Se o modo automático está ativado E tem conteúdo no campo, registra automaticamente
+    if st.session_state.auto_register and chassi and chassi.strip():
+        registrar_chassi(chassi.strip())
+        # Limpa o campo após o registro
+        st.rerun()
+    
+    # Botão adicionar manual (só aparece se o modo automático estiver desativado)
+    if not st.session_state.auto_register:
+        if st.button("➕ ADICIONAR CHASSI", type="primary", use_container_width=True):
+            if chassi:
+                registrar_chassi(chassi.strip())
+                # Limpa o campo após o registro
+                st.rerun()
+            else:
+                st.warning("⚠️ Digite um número de chassi")
+
+    # Instruções para uso com leitor de código de barras
+    if st.session_state.auto_register:
+        st.info("""
+        **🎯 Modo Leitor de Código de Barras Ativado:**
+        - Posicione o leitor no campo acima
+        - A gravação será automática a cada leitura
+        - O campo será limpo automaticamente
+        - Continue lendo os próximos códigos
+        """)
+    else:
+        st.info("""
+        **📋 Como usar:**
+        1. **🏪 Digite o nome da loja** na sidebar
+        2. **📝 Digite o chassi** no campo acima ou **ative o modo leitor de código de barras**
+        3. **➕ Clique em ADICIONAR CHASSI** (modo manual) ou **leia os códigos** (modo automático)
+        4. **📋 Acompanhe a lista** que vai aparecer
+        5. **✅ Clique em FINALIZAR** na sidebar
+        """)
 
     # Lista de chassis registrados
     if st.session_state.chassis:
@@ -136,17 +179,6 @@ def main():
         # Aviso sobre finalização
         if not st.session_state.get('operador_input'):
             st.warning("👆 **Digite o nome da loja na sidebar para finalizar**")
-        
-    else:
-        # Tela inicial quando não há chassis
-        st.info("""
-        **📋 Como usar:**
-        1. **🏪 Digite o nome da loja** na sidebar
-        2. **📝 Digite o chassi** no campo acima  
-        3. **➕ Clique em ADICIONAR CHASSI**
-        4. **📋 Acompanhe a lista** que vai aparecer
-        5. **✅ Clique em FINALIZAR** na sidebar
-        """)
 
 def registrar_chassi(chassi_numero):
     """Registra um chassi"""
@@ -191,7 +223,6 @@ def registrar_chassi(chassi_numero):
             st.session_state.chassis.append(registro)
             cur.close()
             conn.close()
-            st.rerun()
             
         except Exception as e:
             st.error(f"Erro na consulta: {str(e)}")
