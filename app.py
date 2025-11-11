@@ -1,105 +1,105 @@
 import streamlit as st
 import pandas as pd
+import psycopg2
 from datetime import datetime
-from database import Database
-from export import ExportManager
+import os
 
-# Configuração básica
-st.set_page_config(page_title="Controle Chassi Motos", layout="wide")
+# Configuração MÍNIMA
+st.set_page_config(page_title="Controle Chassi", layout="wide")
 
-# Inicializar sessão
+# Título simples
+st.title("🏍️ Controle de Chassi")
+
+# Estado da sessão
 if 'chassis' not in st.session_state:
     st.session_state.chassis = []
 if 'loja' not in st.session_state:
     st.session_state.loja = ""
 
-def main():
-    st.title("🏍️ Controle de Chassi de Motos")
-    
-    # Sidebar
-    with st.sidebar:
-        st.header("Configurações")
-        loja = st.text_input("Nome da Loja", st.session_state.loja)
-        if loja != st.session_state.loja:
-            st.session_state.loja = loja
-            st.rerun()
-        
-        st.divider()
-        st.write(f"Chassis: {len(st.session_state.chassis)}")
-        
-        if st.button("🔄 Nova Contagem"):
-            st.session_state.chassis = []
-            st.rerun()
-    
-    # Se não tem loja definida
-    if not st.session_state.loja:
-        st.warning("Digite o nome da loja na sidebar")
-        return
-    
-    # Formulário principal
-    col1, col2 = st.columns([3, 1])
-    
-    with col1:
-        st.subheader("Registrar Chassi")
-        chassi = st.text_input("Número do Chassi")
-        
-        if st.button("Adicionar", type="primary"):
-            if chassi:
-                registrar_chassi(chassi)
-            else:
-                st.warning("Digite um chassi")
-    
-    # Lista de chassis
-    if st.session_state.chassis:
-        st.subheader("Chassis Registrados")
-        df = pd.DataFrame(st.session_state.chassis)
-        st.dataframe(df, use_container_width=True)
-        
-        # Botão finalizar
-        if st.button("✅ Finalizar Contagem", type="secondary"):
-            finalizar_contagem()
-    else:
-        st.info("Nenhum chassi registrado")
+# Input da loja
+loja = st.text_input("Nome da Loja", st.session_state.loja)
+if loja != st.session_state.loja:
+    st.session_state.loja = loja
 
-def registrar_chassi(chassi_numero):
-    """Registra um chassi"""
-    db = Database()
-    
-    # Verificar duplicado
-    if any(c['chassi'] == chassi_numero for c in st.session_state.chassis):
-        st.warning("Chassi já registrado!")
-        return
-    
-    # Consultar banco
-    info = db.consultar_chassi(chassi_numero)
-    
-    registro = {
-        'chassi': chassi_numero,
-        'data': datetime.now().strftime("%d/%m/%Y %H:%M"),
-        'descricao': info['descricao'] if info else 'Não encontrado',
-        'modelo': info['modelo'] if info else 'N/A',
-        'montador': info['montador'] if info else 'N/A',
-        'status': info['status'] if info else 'Não encontrado'
-    }
-    
-    st.session_state.chassis.append(registro)
-    
-    if info:
-        st.success(f"✅ {chassi_numero} - {info['descricao']}")
-    else:
-        st.error(f"❌ {chassi_numero} não encontrado")
-    
-    st.rerun()
+if not st.session_state.loja:
+    st.stop()
 
-def finalizar_contagem():
-    """Finaliza a contagem"""
-    try:
-        export = ExportManager()
-        filename = export.gerar_excel(st.session_state.chassis, st.session_state.loja)
+# Formulário simples
+st.subheader("Registrar Chassi")
+chassi_input = st.text_input("Número do Chassi")
+
+if st.button("Adicionar Chassi"):
+    if chassi_input:
+        # Verificar duplicado
+        if any(c[0] == chassi_input for c in st.session_state.chassis):
+            st.warning("Chassi já existe!")
+        else:
+            # Consultar banco (simplificado)
+            try:
+                conn = psycopg2.connect(
+                    host=os.getenv('NEON_HOST'),
+                    database=os.getenv('NEON_DATABASE'),
+                    user=os.getenv('NEON_USER'),
+                    password=os.getenv('NEON_PASSWORD'),
+                    port=os.getenv('NEON_PORT'),
+                    sslmode='require'
+                )
+                cur = conn.cursor()
+                cur.execute("SELECT descricao, sku, montador FROM producao WHERE chassi = %s", (chassi_input,))
+                resultado = cur.fetchone()
+                cur.close()
+                conn.close()
+                
+                if resultado:
+                    descricao, modelo, montador = resultado
+                    st.session_state.chassis.append([
+                        chassi_input,
+                        datetime.now().strftime("%d/%m/%Y %H:%M"),
+                        descricao,
+                        modelo,
+                        montador,
+                        "Encontrado"
+                    ])
+                    st.success(f"✅ {chassi_input} - {descricao}")
+                else:
+                    st.session_state.chassis.append([
+                        chassi_input,
+                        datetime.now().strftime("%d/%m/%Y %H:%M"),
+                        "Não encontrado",
+                        "N/A",
+                        "N/A",
+                        "Não encontrado"
+                    ])
+                    st.error(f"❌ {chassi_input} não encontrado")
+                    
+            except Exception as e:
+                st.session_state.chassis.append([
+                    chassi_input,
+                    datetime.now().strftime("%d/%m/%Y %H:%M"),
+                    "Erro na consulta",
+                    "N/A",
+                    "N/A",
+                    f"Erro: {str(e)}"
+                ])
+                st.error("Erro ao consultar banco")
+    else:
+        st.warning("Digite um chassi")
+
+# Lista de chassis
+if st.session_state.chassis:
+    st.subheader("Chassis Registrados")
+    df = pd.DataFrame(
+        st.session_state.chassis,
+        columns=["Chassi", "Data", "Descrição", "Modelo", "Montador", "Status"]
+    )
+    st.dataframe(df, use_container_width=True)
+    
+    # Botão finalizar
+    if st.button("Finalizar Contagem", type="primary"):
+        # Gerar Excel simples
+        filename = f"contagem_{st.session_state.loja}_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx"
+        df.to_excel(filename, index=False)
         
-        st.success("Contagem finalizada!")
-        
-        # Download
         with open(filename, "rb") as f:
             st.download_button(
                 "📥 Baixar Excel",
@@ -107,9 +107,13 @@ def finalizar_contagem():
                 filename,
                 "application/vnd.ms-excel"
             )
-            
-    except Exception as e:
-        st.error(f"Erro: {e}")
+else:
+    st.info("Nenhum chassi registrado")
 
-if __name__ == "__main__":
-    main()
+# Contador simples
+st.sidebar.write(f"Loja: {st.session_state.loja}")
+st.sidebar.write(f"Chassis: {len(st.session_state.chassis)}")
+
+if st.sidebar.button("Nova Contagem"):
+    st.session_state.chassis = []
+    st.rerun()
