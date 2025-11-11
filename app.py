@@ -98,7 +98,6 @@ def main():
                 else:
                     st.warning("⚠️ Digite o nome da loja")
 
-    # Resto do código permanece igual...
     # Área principal - Formulário de chassis
     st.header("📝 Registrar Chassi")
     
@@ -256,11 +255,11 @@ def enviar_email_automatico(arquivo, operador):
         emails_destino = st.secrets.get("EMAIL_TO", "contagem.salimoutlet@gmail.com").split(",")
         emails_destino = [email.strip() for email in emails_destino if email.strip()]
         
-        # Preparar email
+        # Preparar email - ASSUNTO DINÂMICO COM NOME DA LOJA
         msg = MIMEMultipart()
         msg['From'] = st.secrets["EMAIL_FROM"]
         msg['To'] = ", ".join(emails_destino)
-        msg['Subject'] = f"Relatório de Contagem - Salim Outlet - {datetime.now(fuso_brasilia).strftime('%d/%m/%Y')}"
+        msg['Subject'] = f"Relatório de Contagem - {operador} - {datetime.now(fuso_brasilia).strftime('%d/%m/%Y')}"
         
         # Estatísticas
         encontrados = len([c for c in st.session_state.chassis if c['status'] == 'Encontrado'])
