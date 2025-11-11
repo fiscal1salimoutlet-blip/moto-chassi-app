@@ -17,11 +17,17 @@ DB_CONFIG = {
     'sslmode': 'require'
 }
 
+# Armazenamento em memória (em produção use Redis)
 chassis_registrados = []
-loja_nome = ""
 
 def conectar_banco():
-    return psycopg2.connect(**DB_CONFIG)
+    """Conecta ao banco Neon"""
+    try:
+        conn = psycopg2.connect(**DB_CONFIG)
+        return conn
+    except Exception as e:
+        print(f"Erro de conexão: {e}")
+        return None
 
 @app.route('/')
 def index():
@@ -29,11 +35,9 @@ def index():
 
 @app.route('/api/registrar_chassi', methods=['POST'])
 def registrar_chassi():
-    global chassis_registrados
-    
     data = request.json
-    chassi = data.get('chassi')
-    loja = data.get('loja')
+    chassi = data.get('chassi', '').strip()
+    loja = data.get('loja', '').strip()
     
     if not chassi or not loja:
         return jsonify({'error': 'Chassi e loja são obrigatórios'}), 400
@@ -43,8 +47,11 @@ def registrar_chassi():
         return jsonify({'error': 'Chassi já registrado'}), 400
     
     # Consultar banco
+    conn = conectar_banco()
+    if not conn:
+        return jsonify({'error': 'Erro de conexão com o banco'}), 500
+    
     try:
-        conn = conectar_banco()
         cur = conn.cursor()
         cur.execute("SELECT descricao, sku, montador FROM producao WHERE chassi = %s", (chassi,))
         resultado = cur.fetchone()
@@ -59,10 +66,9 @@ def registrar_chassi():
                 'descricao': descricao,
                 'modelo': modelo,
                 'montador': montador,
-                'status': 'Encontrado'
+                'status': 'Encontrado',
+                'loja': loja
             }
-            chassis_registrados.append(registro)
-            return jsonify({'success': True, 'registro': registro})
         else:
             registro = {
                 'chassi': chassi,
@@ -70,22 +76,29 @@ def registrar_chassi():
                 'descricao': 'Não encontrado',
                 'modelo': 'N/A',
                 'montador': 'N/A',
-                'status': 'Não encontrado'
+                'status': 'Não encontrado',
+                'loja': loja
             }
-            chassis_registrados.append(registro)
-            return jsonify({'success': True, 'registro': registro})
+        
+        chassis_registrados.append(registro)
+        return jsonify({'success': True, 'registro': registro})
             
     except Exception as e:
-        return jsonify({'error': f'Erro no banco: {str(e)}'}), 500
+        return jsonify({'error': f'Erro na consulta: {str(e)}'}), 500
+
+@app.route('/api/chassis')
+def listar_chassis():
+    return jsonify({'chassis': chassis_registrados})
 
 @app.route('/api/exportar_excel')
 def exportar_excel():
-    global chassis_registrados, loja_nome
-    
     if not chassis_registrados:
         return jsonify({'error': 'Nenhum chassi registrado'}), 400
     
+    # Criar DataFrame
     df = pd.DataFrame(chassis_registrados)
+    
+    # Gerar Excel em memória
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
         df.to_excel(writer, index=False, sheet_name='Contagem')
@@ -102,8 +115,7 @@ def exportar_excel():
 
 @app.route('/api/limpar_contagem')
 def limpar_contagem():
-    global chassis_registrados
-    chassis_registrados = []
+    chassis_registrados.clear()
     return jsonify({'success': True})
 
 if __name__ == '__main__':
