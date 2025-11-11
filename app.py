@@ -23,6 +23,8 @@ if 'chassis' not in st.session_state:
     st.session_state.chassis = []
 if 'auto_register' not in st.session_state:
     st.session_state.auto_register = False
+if 'last_chassi' not in st.session_state:
+    st.session_state.last_chassi = ""
 
 def conectar_banco():
     """Conecta ao banco Neon"""
@@ -85,7 +87,7 @@ def main():
         
         st.divider()
         
-        # Modo de leitura automática
+        # Modo de leitura automática - AGORA VISÍVEL NA SIDEBAR
         st.session_state.auto_register = st.checkbox(
             "🔴 Modo Leitor de Código de Barras", 
             value=st.session_state.auto_register,
@@ -95,6 +97,7 @@ def main():
         # Botão de nova contagem
         if st.button("🔄 Nova Contagem", use_container_width=True, type="secondary"):
             st.session_state.chassis = []
+            st.session_state.last_chassi = ""
             st.rerun()
         
         st.divider()
@@ -110,51 +113,56 @@ def main():
     # Área principal - Formulário de chassis
     st.header("📝 Registrar Chassi")
     
-    # Container para o campo de chassi com foco automático
+    # Container para o campo de chassi
     chassi_container = st.container()
     
     with chassi_container:
-        # Campo de chassi com placeholder e foco
+        # Campo de chassi com key única para forçar limpeza
         chassi = st.text_input(
             "Digite o número do chassi ou use leitor de código de barras:",
             placeholder="Posicione o leitor aqui...",
-            key="chassi_input",
+            key=f"chassi_input_{len(st.session_state.chassis)}",  # Key dinâmica para forçar limpeza
             label_visibility="visible"
         )
     
-    # Se o modo automático está ativado E tem conteúdo no campo, registra automaticamente
-    if st.session_state.auto_register and chassi and chassi.strip():
+    # Verifica se há um novo chassi para registrar (modo automático)
+    if (st.session_state.auto_register and 
+        chassi and 
+        chassi.strip() and 
+        chassi != st.session_state.last_chassi):
+        
+        st.session_state.last_chassi = chassi
         registrar_chassi(chassi.strip())
-        # Limpa o campo após o registro
+        # Força o rerun para limpar o campo
         st.rerun()
     
     # Botão adicionar manual (só aparece se o modo automático estiver desativado)
     if not st.session_state.auto_register:
-        if st.button("➕ ADICIONAR CHASSI", type="primary", use_container_width=True):
-            if chassi:
-                registrar_chassi(chassi.strip())
-                # Limpa o campo após o registro
-                st.rerun()
-            else:
-                st.warning("⚠️ Digite um número de chassi")
+        col1, col2 = st.columns([3, 1])
+        with col2:
+            if st.button("➕ ADICIONAR CHASSI", type="primary", use_container_width=True):
+                if chassi:
+                    registrar_chassi(chassi.strip())
+                    # Força o rerun para limpar o campo
+                    st.rerun()
+                else:
+                    st.warning("⚠️ Digite um número de chassi")
 
     # Instruções para uso com leitor de código de barras
     if st.session_state.auto_register:
-        st.info("""
-        **🎯 Modo Leitor de Código de Barras Ativado:**
+        st.success("""
+        **🎯 Modo Leitor de Código de Barras ATIVADO**
         - Posicione o leitor no campo acima
-        - A gravação será automática a cada leitura
-        - O campo será limpo automaticamente
+        - A gravação será **automática** a cada leitura
+        - O campo será **limpo automaticamente** após cada registro
         - Continue lendo os próximos códigos
         """)
     else:
         st.info("""
-        **📋 Como usar:**
-        1. **🏪 Digite o nome da loja** na sidebar
-        2. **📝 Digite o chassi** no campo acima ou **ative o modo leitor de código de barras**
-        3. **➕ Clique em ADICIONAR CHASSI** (modo manual) ou **leia os códigos** (modo automático)
-        4. **📋 Acompanhe a lista** que vai aparecer
-        5. **✅ Clique em FINALIZAR** na sidebar
+        **📋 Modo Manual:**
+        - Digite o chassi no campo acima
+        - Clique em **ADICIONAR CHASSI**
+        - Ou **ative o modo leitor de código de barras** na sidebar para leitura automática
         """)
 
     # Lista de chassis registrados
