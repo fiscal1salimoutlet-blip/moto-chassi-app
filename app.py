@@ -21,8 +21,6 @@ fuso_brasilia = timezone(timedelta(hours=-3))
 # Inicializar sessão
 if 'chassis' not in st.session_state:
     st.session_state.chassis = []
-if 'loja' not in st.session_state:
-    st.session_state.loja = "Salim Outlet"  # Nome fixo
 
 def conectar_banco():
     """Conecta ao banco Neon"""
@@ -41,32 +39,37 @@ def conectar_banco():
         return None
 
 def main():
-    # Logo e cabeçalho
-    col_logo, col_titulo = st.columns([1, 3])
-    
-    with col_logo:
-        st.image("https://lookaside.fbsbx.com/lookaside/crawler/instagram/salimoutlet/profile_pic.jpg", 
-                width=100, caption="Salim Outlet")
-    
-    with col_titulo:
-        st.title("🏍️ Controle de Chassi")
+    # Logo e cabeçalho - COM IMAGEM LOCAL
+    st.markdown("""
+    <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
+        <img src="https://raw.githubusercontent.com/fiscal1salimoutlet-blip/moto-chassi-app/main/salimoutlet.jpg" 
+             width="80" style="border-radius: 10px;">
+        <div>
+            <h1 style="margin: 0; color: #2E86AB;">🏍️ Controle de Chassi</h1>
+            <h2 style="margin: 0; color: #A23B72; font-size: 1.5em;">Salim Outlet</h2>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
     
     st.divider()
     
-    # Sidebar FIXA (não pode ser ocultada)
+    # Sidebar FIXA
     with st.sidebar:
-        # Logo na sidebar também
-        st.image("https://lookaside.fbsbx.com/lookaside/crawler/instagram/salimoutlet/profile_pic.jpg", 
-                width=80)
-        st.subheader("Salim Outlet")
+        # Logo na sidebar
+        st.image("salimoutlet.jpg", width=100, caption="Salim Outlet")
+        st.markdown("## Salim Outlet")
         
         st.divider()
         
-        # Nome da loja FIXO
-        st.info("**Loja:** Salim Outlet")
+        # Campo para nome do operador
+        operador = st.text_input(
+            "👤 Nome do Operador:",
+            placeholder="Digite seu nome",
+            key="operador_input"
+        )
         
         # Contador
-        st.metric("Chassis Registrados", len(st.session_state.chassis))
+        st.metric("📋 Chassis Registrados", len(st.session_state.chassis))
         
         st.divider()
         
@@ -80,12 +83,15 @@ def main():
         # Botão finalizar (só aparece se tiver chassis)
         if st.session_state.chassis:
             if st.button("✅ FINALIZAR CONTAGEM", use_container_width=True, type="primary"):
-                finalizar_automático()
+                if operador:
+                    finalizar_automático(operador)
+                else:
+                    st.warning("⚠️ Digite o nome do operador")
 
     # Área principal - Formulário de chassis
     st.header("📝 Registrar Chassi")
     
-    col_input, col_espaco = st.columns([2, 1])
+    col_input, col_info = st.columns([2, 1])
     
     with col_input:
         chassi = st.text_input(
@@ -100,6 +106,14 @@ def main():
                 registrar_chassi(chassi.strip())
             else:
                 st.warning("⚠️ Digite um número de chassi")
+    
+    with col_info:
+        st.info("""
+        **💡 Dica Mobile:**
+        Toque no campo ao lado e selecione:
+        - **📷 Camera** 
+        - **🔍 Scan QR Code**
+        """)
 
     # Lista de chassis registrados
     if st.session_state.chassis:
@@ -121,20 +135,18 @@ def main():
             st.metric("Não Encontrados", nao_encontrados)
             
         # Aviso sobre finalização
-        st.info("💡 **Clique em 'FINALIZAR CONTAGEM' na sidebar para enviar o relatório**")
+        if not st.session_state.get('operador_input'):
+            st.warning("👆 **Digite o nome do operador na sidebar para finalizar**")
         
     else:
         # Tela inicial quando não há chassis
         st.info("""
-        **Como usar:**
-        1. 📝 **Digite o chassi** no campo acima
-        2. 🔄 **Clique em ADICIONAR CHASSI**
-        3. 📋 **Acompanhe a lista** que vai aparecer aqui
-        4. ✅ **Clique em FINALIZAR CONTAGEM** na sidebar quando terminar
-        
-        **O sistema vai automaticamente:**
-        - 📧 Enviar email com o relatório
-        - 📊 Gerar arquivo Excel para download
+        **📋 Como usar:**
+        1. **👤 Digite seu nome** na sidebar
+        2. **📝 Digite o chassi** no campo acima  
+        3. **🔄 Clique em ADICIONAR CHASSI**
+        4. **📋 Acompanhe a lista** que vai aparecer
+        5. **✅ Clique em FINALIZAR** na sidebar
         """)
 
 def registrar_chassi(chassi_numero):
@@ -175,7 +187,7 @@ def registrar_chassi(chassi_numero):
                     'montador': 'N/A',
                     'status': 'Não encontrado'
                 }
-                st.error(f"❌ **{chassi_numero}** - Não encontrado na base de dados")
+                st.error(f"❌ **{chassi_numero}** - Não encontrado")
             
             st.session_state.chassis.append(registro)
             cur.close()
@@ -185,9 +197,9 @@ def registrar_chassi(chassi_numero):
         except Exception as e:
             st.error(f"Erro na consulta: {str(e)}")
     else:
-        st.error("❌ Erro de conexão com o banco de dados")
+        st.error("❌ Erro de conexão com o banco")
 
-def finalizar_automático():
+def finalizar_automático(operador):
     """Finaliza automaticamente - gera Excel e envia email"""
     try:
         # Gerar Excel
@@ -196,7 +208,7 @@ def finalizar_automático():
         df.to_excel(filename, index=False)
         
         # Enviar email automático
-        enviar_email_automatico(filename)
+        enviar_email_automatico(filename, operador)
         
         # Mostrar sucesso
         st.balloons()
@@ -207,11 +219,12 @@ def finalizar_automático():
         nao_encontrados = len([c for c in st.session_state.chassis if c['status'] == 'Não encontrado'])
         
         st.info(f"""
-        **Relatório enviado:**
-        - 📧 **Email:** Enviado para os destinatários configurados
-        - 📊 **Total de chassis:** {len(st.session_state.chassis)}
-        - ✅ **Encontrados:** {encontrados}
-        - ❌ **Não encontrados:** {nao_encontrados}
+        **📊 Relatório enviado:**
+        - **📧 Email:** Enviado automaticamente
+        - **👤 Operador:** {operador}
+        - **📦 Total de chassis:** {len(st.session_state.chassis)}
+        - **✅ Encontrados:** {encontrados}
+        - **❌ Não encontrados:** {nao_encontrados}
         """)
         
         # Botão para baixar Excel
@@ -228,8 +241,8 @@ def finalizar_automático():
     except Exception as e:
         st.error(f"❌ Erro ao finalizar: {str(e)}")
 
-def enviar_email_automatico(arquivo):
-    """Envia email automaticamente para múltiplos destinatários"""
+def enviar_email_automatico(arquivo, operador):
+    """Envia email automaticamente"""
     try:
         # Verificar se as configurações de email existem
         required_secrets = ["EMAIL_FROM", "EMAIL_PASSWORD", "SMTP_SERVER", "SMTP_PORT"]
@@ -239,7 +252,7 @@ def enviar_email_automatico(arquivo):
             st.warning(f"⚠️ Email não configurado. Faltando: {', '.join(missing_secrets)}")
             return False
         
-        # Lista de emails fixa (configure nas Secrets)
+        # Lista de emails fixa
         emails_destino = st.secrets.get("EMAIL_TO", "contagem.salimoutlet@gmail.com").split(",")
         emails_destino = [email.strip() for email in emails_destino if email.strip()]
         
@@ -257,18 +270,15 @@ def enviar_email_automatico(arquivo):
         body = f"""
         RELATÓRIO DE CONTAGEM DE CHASSI - SALIM OUTLET
         
-        Data da contagem: {datetime.now(fuso_brasilia).strftime('%d/%m/%Y %H:%M')}
+        Data: {datetime.now(fuso_brasilia).strftime('%d/%m/%Y %H:%M')}
+        Operador: {operador}
         
         RESUMO:
-        • Total de chassis registrados: {len(st.session_state.chassis)}
-        • Encontrados na base de dados: {encontrados}
+        • Total de chassis: {len(st.session_state.chassis)}
+        • Encontrados: {encontrados}
         • Não encontrados: {nao_encontrados}
         
-        DETALHES:
-        Loja: Salim Outlet
-        Responsável: Sistema Automático
-        
-        O arquivo Excel em anexo contém a lista completa com todos os detalhes.
+        O arquivo Excel em anexo contém a lista completa.
         
         --
         Sistema de Controle de Chassi
@@ -292,7 +302,6 @@ def enviar_email_automatico(arquivo):
             server.send_message(msg)
             server.quit()
         except:
-            # Tentar com TLS
             server = smtplib.SMTP(st.secrets["SMTP_SERVER"], int(st.secrets["SMTP_PORT"]))
             server.starttls()
             server.login(st.secrets["EMAIL_FROM"], st.secrets["EMAIL_PASSWORD"])
