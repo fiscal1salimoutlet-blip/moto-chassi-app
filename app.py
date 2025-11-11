@@ -21,12 +21,10 @@ fuso_brasilia = timezone(timedelta(hours=-3))
 # Inicializar sessão
 if 'chassis' not in st.session_state:
     st.session_state.chassis = []
-if 'auto_register' not in st.session_state:
-    st.session_state.auto_register = True  # Agora é automático por padrão
 if 'last_chassi' not in st.session_state:
     st.session_state.last_chassi = ""
-if 'focus_field' not in st.session_state:
-    st.session_state.focus_field = False
+if 'input_key' not in st.session_state:
+    st.session_state.input_key = 0
 
 def conectar_banco():
     """Conecta ao banco Neon"""
@@ -89,7 +87,7 @@ def main():
         
         st.divider()
         
-        # Modo de leitura automática - SEMPRE ATIVO (removido o checkbox)
+        # Informação do modo automático
         st.info("🔴 **Modo Leitor Ativo**")
         st.caption("Gravação automática ao ler código de barras")
         
@@ -97,7 +95,7 @@ def main():
         if st.button("🔄 Nova Contagem", use_container_width=True, type="secondary"):
             st.session_state.chassis = []
             st.session_state.last_chassi = ""
-            st.session_state.focus_field = True
+            st.session_state.input_key += 1
             st.rerun()
         
         st.divider()
@@ -113,70 +111,88 @@ def main():
     # Área principal - Formulário de chassis
     st.header("📝 Registrar Chassi")
     
-    # JavaScript para focar automaticamente no campo
-    if st.session_state.focus_field:
-        st.markdown("""
-        <script>
-            function focusChassiField() {
-                const input = document.querySelector('input[placeholder*="leitor"]');
-                if (input) {
+    # JavaScript para auto-foco - executado sempre
+    st.markdown("""
+    <script>
+        // Função para focar no campo de chassi
+        function focusChassiField() {
+            // Procura por qualquer input
+            const inputs = document.querySelectorAll('input');
+            for (let input of inputs) {
+                if (input.type === 'text') {
+                    // Foca e seleciona todo o texto
                     input.focus();
                     input.select();
+                    break;
                 }
             }
-            // Tenta focar imediatamente e também após um pequeno delay
+        }
+        
+        // Tenta focar quando a página carrega
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', focusChassiField);
+        } else {
             focusChassiField();
-            setTimeout(focusChassiField, 100);
-            setTimeout(focusChassiField, 500);
-        </script>
-        """, unsafe_allow_html=True)
-        st.session_state.focus_field = False
+        }
+        
+        // Também tenta focar após um pequeno delay
+        setTimeout(focusChassiField, 100);
+        setTimeout(focusChassiField, 500);
+        
+        // Foca sempre que houver mudança na página
+        const observer = new MutationObserver(focusChassiField);
+        observer.observe(document.body, { childList: true, subtree: true });
+    </script>
+    """, unsafe_allow_html=True)
     
     # Container para o campo de chassi
     chassi_container = st.container()
     
     with chassi_container:
-        # Campo de chassi com key única para forçar limpeza
+        # Campo de chassi com key dinâmica que muda a cada registro
         chassi = st.text_input(
             "Digite o número do chassi ou use leitor de código de barras:",
-            placeholder="Posicione o leitor aqui... (campo com foco automático)",
-            key=f"chassi_input_{len(st.session_state.chassis)}",  # Key dinâmica para forçar limpeza
+            placeholder="⬅️ POSICIONE O LEITOR AQUI (campo com foco automático)",
+            key=f"chassi_input_{st.session_state.input_key}",
             label_visibility="visible"
         )
     
-    # Verifica se há um novo chassi para registrar (modo automático SEMPRE ATIVO)
+    # Verifica se há um novo chassi para registrar (modo automático)
     if (chassi and 
         chassi.strip() and 
         chassi != st.session_state.last_chassi):
         
         st.session_state.last_chassi = chassi
         registrar_chassi(chassi.strip())
-        # Marca para focar no campo após o rerun
-        st.session_state.focus_field = True
+        # Incrementa a key para forçar novo campo limpo
+        st.session_state.input_key += 1
         # Força o rerun para limpar o campo
         st.rerun()
     
-    # Botão adicionar manual (só para backup)
-    col1, col2 = st.columns([3, 1])
-    with col2:
-        if st.button("➕ ADICIONAR MANUAL", type="secondary", use_container_width=True):
-            if chassi:
-                registrar_chassi(chassi.strip())
-                # Marca para focar no campo após o rerun
-                st.session_state.focus_field = True
-                # Força o rerun para limpar o campo
-                st.rerun()
-            else:
-                st.warning("⚠️ Digite um número de chassi")
+    # Botão adicionar manual (apenas para backup)
+    with st.expander("⚙️ Modo Manual (Backup)"):
+        col1, col2 = st.columns([3, 1])
+        with col2:
+            if st.button("➕ ADICIONAR MANUAL", type="secondary", use_container_width=True):
+                if chassi:
+                    registrar_chassi(chassi.strip())
+                    st.session_state.input_key += 1
+                    st.rerun()
+                else:
+                    st.warning("⚠️ Digite um número de chassi")
 
     # Instruções para uso com leitor de código de barras
     st.success("""
-    **🎯 Modo Leitor de Código de Barras ATIVADO**
-    - Posicione o leitor no campo acima
-    - O campo **já está com foco automático**
-    - A gravação será **automática** a cada leitura
-    - O campo será **limpo automaticamente** após cada registro
-    - Continue lendo os próximos códigos
+    **🎯 MODO LEITOR DE CÓDIGO DE BARRAS ATIVADO**
+    
+    **→ POSICIONE O LEITOR NO CAMPO ACIMA ←**
+    
+    - ✅ **Foco automático** no campo
+    - ✅ **Gravação automática** a cada leitura  
+    - ✅ **Campo limpo** após cada registro
+    - ✅ **Pronto para próxima leitura**
+    
+    *O campo já está selecionado e aguardando a leitura...*
     """)
 
     # Lista de chassis registrados
