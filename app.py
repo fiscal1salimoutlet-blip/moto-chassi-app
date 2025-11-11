@@ -364,7 +364,7 @@ def enviar_email_automatico(arquivo, operador):
         
         return True
         
-    except Exception e:
+    except Exception as e:  # CORRIGIDO: tinha um erro de sintaxe aqui
         st.error(f"❌ Erro no envio de email: {str(e)}")
         return False
 
