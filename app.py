@@ -25,8 +25,6 @@ if 'last_chassi' not in st.session_state:
     st.session_state.last_chassi = ""
 if 'input_key' not in st.session_state:
     st.session_state.input_key = 0
-if 'should_focus' not in st.session_state:
-    st.session_state.should_focus = True
 
 def conectar_banco():
     """Conecta ao banco Neon"""
@@ -98,7 +96,6 @@ def main():
             st.session_state.chassis = []
             st.session_state.last_chassi = ""
             st.session_state.input_key += 1
-            st.session_state.should_focus = True
             st.rerun()
         
         st.divider()
@@ -114,64 +111,51 @@ def main():
     # Área principal - Formulário de chassis
     st.header("📝 Registrar Chassi")
     
-    # JavaScript para auto-foco - SOLUÇÃO MAIS ROBUSTA
-    if st.session_state.should_focus:
-        st.markdown("""
-        <div id="focus-helper"></div>
-        <script>
-            function focusChassiField() {
-                // Procura por inputs de texto
-                const inputs = document.querySelectorAll('input[type="text"]');
-                for (let input of inputs) {
-                    // Verifica se é o campo de chassi pelo placeholder
-                    if (input.placeholder && input.placeholder.includes('leitor')) {
-                        input.focus();
-                        input.select();
-                        console.log('Campo de chassi focado!');
-                        return true;
-                    }
-                }
-                console.log('Campo de chassi não encontrado');
-                return false;
-            }
+    # JavaScript para auto-foco - ABORDAGEM DIRETA
+    st.markdown("""
+    <script>
+        function focusChassiField() {
+            // Procura por todos os inputs
+            const inputs = document.querySelectorAll('input');
+            let found = false;
             
-            // Tenta focar múltiplas vezes
-            let attempts = 0;
-            const maxAttempts = 10;
-            
-            function tryFocus() {
-                attempts++;
-                if (focusChassiField()) {
-                    console.log('Foco aplicado com sucesso na tentativa', attempts);
-                } else if (attempts < maxAttempts) {
-                    setTimeout(tryFocus, 100);
+            for (let input of inputs) {
+                // Tenta encontrar pelo tipo text
+                if (input.type === 'text') {
+                    // Foca no primeiro input de texto que encontrar
+                    input.focus();
+                    input.select();
+                    console.log('Focado no input:', input);
+                    found = true;
+                    break;
                 }
             }
             
-            // Inicia as tentativas
-            tryFocus();
-            
-            // Também tenta quando o DOM estiver pronto
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', tryFocus);
+            if (!found) {
+                console.log('Nenhum input de texto encontrado');
+                // Tenta novamente depois de um tempo
+                setTimeout(focusChassiField, 200);
             }
-            
-            // Tenta focar quando houver clique em qualquer lugar (útil para mobile)
-            document.addEventListener('click', function() {
-                setTimeout(focusChassiField, 50);
-            });
-            
-        </script>
-        """, unsafe_allow_html=True)
+        }
         
-        # Reseta o flag após tentar focar
-        st.session_state.should_focus = False
+        // Executa imediatamente
+        focusChassiField();
+        
+        // E executa várias vezes com intervalos
+        setTimeout(focusChassiField, 100);
+        setTimeout(focusChassiField, 300);
+        setTimeout(focusChassiField, 500);
+        setTimeout(focusChassiField, 1000);
+        setTimeout(focusChassiField, 2000);
+        
+    </script>
+    """, unsafe_allow_html=True)
     
-    # Container para o campo de chassi
+    # Container para o campo de chassi - COM ID ESPECÍFICO
     chassi_container = st.container()
     
     with chassi_container:
-        # Campo de chassi com key dinâmica
+        # Campo de chassi com key dinâmica e atributos extras
         chassi = st.text_input(
             "Digite o número do chassi ou use leitor de código de barras:",
             placeholder="⬅️ POSICIONE O LEITOR AQUI - CAMPO COM FOCO AUTOMÁTICO",
@@ -188,8 +172,6 @@ def main():
         registrar_chassi(chassi.strip())
         # Incrementa a key para forçar novo campo limpo
         st.session_state.input_key += 1
-        # Marca para focar no próximo render
-        st.session_state.should_focus = True
         # Força o rerun para limpar o campo
         st.rerun()
 
