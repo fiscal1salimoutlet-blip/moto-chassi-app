@@ -39,14 +39,11 @@ def conectar_banco():
         return None
 
 def main():
-    # Cabeçalho com a cor correta #2e86ab
-    st.markdown("""
-    <div style="margin-bottom: 20px;">
-        <h1 style="margin: 0; color: #2e86ab; font-size: 2.5rem; font-weight: bold;">
-            Salim Outlet - Controle de Scooters
-        </h1>
-    </div>
-    """, unsafe_allow_html=True)
+    # Cabeçalho usando markdown do Streamlit
+    st.markdown(
+        "<h1 style='color: #2e86ab; margin-bottom: 20px;'>Salim Outlet - Controle de Scooters</h1>",
+        unsafe_allow_html=True
+    )
     
     st.divider()
     
