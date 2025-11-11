@@ -111,39 +111,37 @@ def main():
     # Área principal - Formulário de chassis
     st.header("📝 Registrar Chassi")
     
-    # JavaScript para auto-foco - executado sempre
-    st.markdown("""
+    # JavaScript para auto-foco - MAIS EFICAZ
+    st.components.v1.html("""
     <script>
-        // Função para focar no campo de chassi
-        function focusChassiField() {
-            // Procura por qualquer input
-            const inputs = document.querySelectorAll('input');
-            for (let input of inputs) {
-                if (input.type === 'text') {
-                    // Foca e seleciona todo o texto
-                    input.focus();
-                    input.select();
-                    break;
+        function focusField() {
+            var inputs = document.getElementsByTagName('input');
+            for (var i = 0; i < inputs.length; i++) {
+                if (inputs[i].type === 'text' && inputs[i].placeholder && inputs[i].placeholder.includes('leitor')) {
+                    inputs[i].focus();
+                    inputs[i].select();
+                    return true;
                 }
             }
+            return false;
         }
         
-        // Tenta focar quando a página carrega
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', focusChassiField);
-        } else {
-            focusChassiField();
-        }
+        // Tenta focar imediatamente
+        setTimeout(focusField, 100);
+        setTimeout(focusField, 300);
+        setTimeout(focusField, 500);
+        setTimeout(focusField, 1000);
         
-        // Também tenta focar após um pequeno delay
-        setTimeout(focusChassiField, 100);
-        setTimeout(focusChassiField, 500);
+        // Foca quando a página termina de carregar
+        window.addEventListener('load', function() {
+            setTimeout(focusField, 100);
+        });
         
-        // Foca sempre que houver mudança na página
-        const observer = new MutationObserver(focusChassiField);
-        observer.observe(document.body, { childList: true, subtree: true });
+        // Foca sempre que o mouse é movido (útil para quando o usuário volta com o leitor)
+        document.addEventListener('mousemove', focusField);
+        
     </script>
-    """, unsafe_allow_html=True)
+    """, height=0)
     
     # Container para o campo de chassi
     chassi_container = st.container()
@@ -152,7 +150,7 @@ def main():
         # Campo de chassi com key dinâmica que muda a cada registro
         chassi = st.text_input(
             "Digite o número do chassi ou use leitor de código de barras:",
-            placeholder="⬅️ POSICIONE O LEITOR AQUI (campo com foco automático)",
+            placeholder="⬅️ POSICIONE O LEITOR AQUI - CAMPO COM FOCO AUTOMÁTICO",
             key=f"chassi_input_{st.session_state.input_key}",
             label_visibility="visible"
         )
@@ -168,18 +166,6 @@ def main():
         st.session_state.input_key += 1
         # Força o rerun para limpar o campo
         st.rerun()
-    
-    # Botão adicionar manual (apenas para backup)
-    with st.expander("⚙️ Modo Manual (Backup)"):
-        col1, col2 = st.columns([3, 1])
-        with col2:
-            if st.button("➕ ADICIONAR MANUAL", type="secondary", use_container_width=True):
-                if chassi:
-                    registrar_chassi(chassi.strip())
-                    st.session_state.input_key += 1
-                    st.rerun()
-                else:
-                    st.warning("⚠️ Digite um número de chassi")
 
     # Instruções para uso com leitor de código de barras
     st.success("""
@@ -378,7 +364,7 @@ def enviar_email_automatico(arquivo, operador):
         
         return True
         
-    except Exception as e:
+    except Exception e:
         st.error(f"❌ Erro no envio de email: {str(e)}")
         return False
 
