@@ -45,7 +45,7 @@ def main():
         <img src="https://raw.githubusercontent.com/fiscal1salimoutlet-blip/moto-chassi-app/main/salimoutlet.jpg" 
              width="80" style="border-radius: 10px;">
         <div>
-            <h1 style="margin: 0; color: #2E86AB;">🏍️ Controle de Chassi</h1>
+            <h1 style="margin: 0; color: #2E86AB;"> Controle de Scooters</h1>
             <h2 style="margin: 0; color: #A23B72; font-size: 1.5em;">Salim Outlet</h2>
         </div>
     </div>
@@ -61,10 +61,10 @@ def main():
         
         st.divider()
         
-        # Campo para nome do operador
+        # Campo para nome da loja
         operador = st.text_input(
             "🏪 Loja:",
-            placeholder="Digite seu nome",
+            placeholder="Digite o nome da loja",
             key="operador_input"
         )
         
@@ -86,34 +86,23 @@ def main():
                 if operador:
                     finalizar_automático(operador)
                 else:
-                    st.warning("⚠️ Digite o nome do operador")
+                    st.warning("⚠️ Digite o nome da loja")
 
     # Área principal - Formulário de chassis
     st.header("📝 Registrar Chassi")
     
-    col_input, col_info = st.columns([2, 1])
+    chassi = st.text_input(
+        "Digite o número do chassi:",
+        placeholder="Ex: 1, 2, NVESTCASA2025030526...",
+        key="chassi_input"
+    )
     
-    with col_input:
-        chassi = st.text_input(
-            "Digite o número do chassi ou escaneie o QR Code:",
-            placeholder="Ex: 1, 2, NVESTCASA2025030526...",
-            key="chassi_input"
-        )
-        
-        # Botão adicionar
-        if st.button("➕ ADICIONAR CHASSI", type="primary", use_container_width=True):
-            if chassi:
-                registrar_chassi(chassi.strip())
-            else:
-                st.warning("⚠️ Digite um número de chassi")
-    
-    with col_info:
-        st.info("""
-        **💡 Dica Mobile:**
-        Toque no campo ao lado e selecione:
-        - **📷 Camera** 
-        - **🔍 Scan QR Code**
-        """)
+    # Botão adicionar
+    if st.button("➕ ADICIONAR CHASSI", type="primary", use_container_width=True):
+        if chassi:
+            registrar_chassi(chassi.strip())
+        else:
+            st.warning("⚠️ Digite um número de chassi")
 
     # Lista de chassis registrados
     if st.session_state.chassis:
@@ -136,15 +125,15 @@ def main():
             
         # Aviso sobre finalização
         if not st.session_state.get('operador_input'):
-            st.warning("👆 **Digite o nome do operador na sidebar para finalizar**")
+            st.warning("👆 **Digite o nome da loja na sidebar para finalizar**")
         
     else:
         # Tela inicial quando não há chassis
         st.info("""
         **📋 Como usar:**
-        1. **🏪 Digite a sua loja ** na sidebar
+        1. **🏪 Digite o nome da loja** na sidebar
         2. **📝 Digite o chassi** no campo acima  
-        3. **🔄 Clique em ADICIONAR CHASSI**
+        3. **➕ Clique em ADICIONAR CHASSI**
         4. **📋 Acompanhe a lista** que vai aparecer
         5. **✅ Clique em FINALIZAR** na sidebar
         """)
@@ -221,7 +210,7 @@ def finalizar_automático(operador):
         st.info(f"""
         **📊 Relatório enviado:**
         - **📧 Email:** Enviado automaticamente
-        - **👤 Operador:** {operador}
+        - **🏪 Loja:** {operador}
         - **📦 Total de chassis:** {len(st.session_state.chassis)}
         - **✅ Encontrados:** {encontrados}
         - **❌ Não encontrados:** {nao_encontrados}
@@ -271,7 +260,7 @@ def enviar_email_automatico(arquivo, operador):
         RELATÓRIO DE CONTAGEM DE CHASSI - SALIM OUTLET
         
         Data: {datetime.now(fuso_brasilia).strftime('%d/%m/%Y %H:%M')}
-        Operador: {operador}
+        Loja: {operador}
         
         RESUMO:
         • Total de chassis: {len(st.session_state.chassis)}
