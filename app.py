@@ -39,13 +39,13 @@ def conectar_banco():
         return None
 
 def main():
-    # Cabeçalho com cor AMARELO OURO e CONTORNO PRETO
+    # Cabeçalho com cor AMARELO OURO, CONTORNO PRETO e TAMANHO DOBRADO
     st.markdown(
         """
         <h1 style='
             color: #FFD700; 
             margin-bottom: 20px; 
-            font-size: 2.5rem;
+            font-size: 5rem;
             text-shadow: 
                 -2px -2px 0 #000,
                 2px -2px 0 #000,
@@ -56,6 +56,7 @@ def main():
                 0px -3px 0 #000,
                 0px 3px 0 #000;
             font-weight: bold;
+            text-align: center;
         '>Salim Outlet - Controle de Scooters</h1>
         """,
         unsafe_allow_html=True
