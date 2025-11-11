@@ -39,15 +39,10 @@ def conectar_banco():
         return None
 
 def main():
-    # Logo e cabeçalho - COM IMAGEM LOCAL
+    # Cabeçalho simplificado - SEM IMAGEM E SEM "SALIM OUTLET" ABAIXO
     st.markdown("""
-    <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
-        <img src="https://raw.githubusercontent.com/fiscal1salimoutlet-blip/moto-chassi-app/main/salimoutlet.jpg" 
-             width="80" style="border-radius: 10px;">
-        <div>
-            <h1 style="margin: 0; color: #2E86AB;"> Controle de Scooters</h1>
-            <h2 style="margin: 0; color: #A23B72; font-size: 1.5em;">Salim Outlet</h2>
-        </div>
+    <div style="margin-bottom: 20px;">
+        <h1 style="margin: 0; color: #2E86AB;">Controle de Scooters</h1>
     </div>
     """, unsafe_allow_html=True)
     
@@ -55,9 +50,8 @@ def main():
     
     # Sidebar FIXA
     with st.sidebar:
-        # Logo na sidebar
-        st.image("salimoutlet.jpg", width=100, caption="Salim Outlet")
-        st.markdown("## Salim Outlet")
+        # REMOVIDO: Logo na sidebar
+        # REMOVIDO: "Salim Outlet" abaixo do logo
         
         st.divider()
         
