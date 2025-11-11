@@ -68,7 +68,101 @@ def main():
     
     st.divider()
     
-    # Sidebar FIXA
+    # Área principal - Formulário de chassis PRIMEIRO
+    st.header("📝 Registrar Chassi")
+    
+    # Container para o campo de chassi - AGORA É O PRIMEIRO ELEMENTO
+    chassi_container = st.container()
+    
+    with chassi_container:
+        # Campo de chassi com key dinâmica
+        chassi = st.text_input(
+            "Digite o número do chassi ou use leitor de código de barras:",
+            placeholder="⬅️ POSICIONE O LEITOR AQUI - CAMPO COM FOCO AUTOMÁTICO",
+            key=f"chassi_input_{st.session_state.input_key}",
+            label_visibility="visible"
+        )
+    
+    # JavaScript SUPER AGRESSIVO para foco
+    st.markdown("""
+    <script>
+        function focusChassiField() {
+            // Método 1: Procura por input com placeholder específico
+            let inputs = document.querySelectorAll('input');
+            for (let i = 0; i < inputs.length; i++) {
+                if (inputs[i].placeholder && inputs[i].placeholder.includes('leitor')) {
+                    inputs[i].focus();
+                    inputs[i].select();
+                    console.log('Método 1: Focado pelo placeholder');
+                    return true;
+                }
+            }
+            
+            // Método 2: Procura pelo primeiro input de texto
+            inputs = document.querySelectorAll('input[type="text"]');
+            if (inputs.length > 0) {
+                inputs[0].focus();
+                inputs[0].select();
+                console.log('Método 2: Focado no primeiro input de texto');
+                return true;
+            }
+            
+            // Método 3: Procura por qualquer input
+            inputs = document.querySelectorAll('input');
+            if (inputs.length > 0) {
+                inputs[0].focus();
+                inputs[0].select();
+                console.log('Método 3: Focado no primeiro input geral');
+                return true;
+            }
+            
+            console.log('Nenhum input encontrado');
+            return false;
+        }
+        
+        // Executa AGressivamente várias vezes
+        setTimeout(focusChassiField, 50);
+        setTimeout(focusChassiField, 150);
+        setTimeout(focusChassiField, 300);
+        setTimeout(focusChassiField, 500);
+        setTimeout(focusChassiField, 1000);
+        setTimeout(focusChassiField, 2000);
+        
+        // Também executa quando a página carrega completamente
+        window.addEventListener('load', function() {
+            setTimeout(focusChassiField, 100);
+        });
+        
+    </script>
+    """, unsafe_allow_html=True)
+    
+    # Verifica se há um novo chassi para registrar (modo automático)
+    if (chassi and 
+        chassi.strip() and 
+        chassi != st.session_state.last_chassi):
+        
+        st.session_state.last_chassi = chassi
+        registrar_chassi(chassi.strip())
+        # Incrementa a key para forçar novo campo limpo
+        st.session_state.input_key += 1
+        # Força o rerun para limpar o campo
+        st.rerun()
+
+    # Instruções para uso com leitor de código de barras
+    st.success("""
+    **🎯 MODO LEITOR DE CÓDIGO DE BARRAS ATIVADO**
+    
+    **→ POSICIONE O LEITOR NO CAMPO ACIMA ←**
+    
+    - ✅ **Foco automático** no campo
+    - ✅ **Gravação automática** a cada leitura  
+    - ✅ **Campo limpo** após cada registro
+    - ✅ **Pronto para próxima leitura**
+    
+    *O campo já está selecionado e aguardando a leitura...*
+    """)
+
+    # Sidebar FIXA - MOVIDA PARA DEPOIS DO CAMPO PRINCIPAL
     with st.sidebar:
         # Logo na sidebar (MANTIDO)
         st.image("salimoutlet.jpg", width=100)
@@ -107,84 +201,6 @@ def main():
                     finalizar_automático(operador)
                 else:
                     st.warning("⚠️ Digite o nome da loja")
-
-    # Área principal - Formulário de chassis
-    st.header("📝 Registrar Chassi")
-    
-    # JavaScript que simula Tab - SOLUÇÃO DEFINITIVA
-    st.markdown("""
-    <script>
-        function simulateTab() {
-            // Cria e dispara um evento Tab
-            const tabEvent = new KeyboardEvent('keydown', {
-                key: 'Tab',
-                code: 'Tab',
-                keyCode: 9,
-                which: 9,
-                bubbles: true
-            });
-            
-            document.activeElement.dispatchEvent(tabEvent);
-            
-            // Também tenta focar diretamente no campo
-            setTimeout(() => {
-                const inputs = document.querySelectorAll('input[type="text"]');
-                if (inputs.length > 0) {
-                    // Foca no último input (geralmente é o campo de chassi)
-                    const lastInput = inputs[inputs.length - 1];
-                    lastInput.focus();
-                    lastInput.select();
-                    console.log('Campo focado via Tab simulation');
-                }
-            }, 100);
-        }
-        
-        // Executa várias vezes para garantir
-        setTimeout(simulateTab, 100);
-        setTimeout(simulateTab, 300);
-        setTimeout(simulateTab, 500);
-        setTimeout(simulateTab, 1000);
-        
-    </script>
-    """, unsafe_allow_html=True)
-    
-    # Container para o campo de chassi
-    chassi_container = st.container()
-    
-    with chassi_container:
-        # Campo de chassi com key dinâmica - ADICIONANDO AUTOFOCUS
-        chassi = st.text_input(
-            "Digite o número do chassi ou use leitor de código de barras:",
-            placeholder="⬅️ POSICIONE O LEITOR AQUI - CAMPO COM FOCO AUTOMÁTICO",
-            key=f"chassi_input_{st.session_state.input_key}",
-            label_visibility="visible"
-        )
-    
-    # Verifica se há um novo chassi para registrar (modo automático)
-    if (chassi and 
-        chassi.strip() and 
-        chassi != st.session_state.last_chassi):
-        
-        st.session_state.last_chassi = chassi
-        registrar_chassi(chassi.strip())
-        # Incrementa a key para forçar novo campo limpo
-        st.session_state.input_key += 1
-        # Força o rerun para limpar o campo
-        st.rerun()
-
-    # Instruções para uso com leitor de código de barras
-    st.success("""
-    **🎯 MODO LEITOR DE CÓDIGO DE BARRAS ATIVADO**
-    
-    **→ POSICIONE O LEITOR NO CAMPO ACIMA ←**
-    
-    - ✅ **Foco automático** no campo
-    - ✅ **Gravação automática** a cada leitura  
-    - ✅ **Campo limpo** após cada registro
-    - ✅ **Pronto para próxima leitura**
-    
-    *O campo já está selecionado e aguardando a leitura...*
-    """)
 
     # Lista de chassis registrados
     if st.session_state.chassis:
