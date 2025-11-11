@@ -21,10 +21,6 @@ fuso_brasilia = timezone(timedelta(hours=-3))
 # Inicializar sessão
 if 'chassis' not in st.session_state:
     st.session_state.chassis = []
-if 'last_chassi' not in st.session_state:
-    st.session_state.last_chassi = ""
-if 'input_key' not in st.session_state:
-    st.session_state.input_key = 0
 
 def conectar_banco():
     """Conecta ao banco Neon"""
@@ -68,65 +64,6 @@ def main():
     
     st.divider()
     
-    # Área principal - Formulário de chassis
-    st.header("📝 Registrar Chassi")
-    
-    # Container para o campo de chassi
-    chassi_container = st.container()
-    
-    with chassi_container:
-        # Campo de chassi com key dinâmica
-        chassi = st.text_input(
-            "Digite o número do chassi ou use leitor de código de barras:",
-            placeholder="⬅️ POSICIONE O LEITOR AQUI - O CAMPO ESTÁ PRONTO",
-            key=f"chassi_input_{st.session_state.input_key}",
-            label_visibility="visible"
-        )
-    
-    # JavaScript MUITO SIMPLES - apenas tenta focar uma vez
-    st.markdown("""
-    <script>
-        // Espera a página carregar e tenta focar no campo
-        setTimeout(function() {
-            // Procura por inputs com placeholder que contenha "leitor"
-            const inputs = document.querySelectorAll('input');
-            for (let input of inputs) {
-                if (input.placeholder && input.placeholder.includes('LEITOR')) {
-                    input.focus();
-                    input.select();
-                    console.log('Campo de chassi focado');
-                    break;
-                }
-            }
-        }, 1000);
-    </script>
-    """, unsafe_allow_html=True)
-    
-    # Verifica se há um novo chassi para registrar (modo automático)
-    if (chassi and 
-        chassi.strip() and 
-        chassi != st.session_state.last_chassi):
-        
-        st.session_state.last_chassi = chassi
-        registrar_chassi(chassi.strip())
-        # Incrementa a key para forçar novo campo limpo
-        st.session_state.input_key += 1
-        # Força o rerun para limpar o campo
-        st.rerun()
-
-    # Instruções para uso com leitor de código de barras
-    st.success("""
-    **🎯 MODO LEITOR DE CÓDIGO DE BARRAS ATIVADO**
-    
-    **→ POSICIONE O LEITOR NO CAMPO ACIMA ←**
-    
-    - ✅ **Gravação automática** a cada leitura  
-    - ✅ **Campo limpo** após cada registro
-    - ✅ **Pronto para próxima leitura**
-    
-    *Dica: Se o campo não estiver com foco, clique uma vez nele e depois use o leitor.*
-    """)
-
     # Sidebar FIXA
     with st.sidebar:
         # Logo na sidebar (MANTIDO)
@@ -146,15 +83,9 @@ def main():
         
         st.divider()
         
-        # Informação do modo automático
-        st.info("🔴 **Modo Leitor Ativo**")
-        st.caption("Gravação automática ao ler código de barras")
-        
         # Botão de nova contagem
         if st.button("🔄 Nova Contagem", use_container_width=True, type="secondary"):
             st.session_state.chassis = []
-            st.session_state.last_chassi = ""
-            st.session_state.input_key += 1
             st.rerun()
         
         st.divider()
@@ -166,6 +97,22 @@ def main():
                     finalizar_automático(operador)
                 else:
                     st.warning("⚠️ Digite o nome da loja")
+
+    # Área principal - Formulário de chassis
+    st.header("📝 Registrar Chassi")
+    
+    chassi = st.text_input(
+        "Digite o número do chassi:",
+        placeholder="Ex: 1, 2, NVESTCASA2025030526...",
+        key="chassi_input"
+    )
+    
+    # Botão adicionar
+    if st.button("➕ ADICIONAR CHASSI", type="primary", use_container_width=True):
+        if chassi:
+            registrar_chassi(chassi.strip())
+        else:
+            st.warning("⚠️ Digite um número de chassi")
 
     # Lista de chassis registrados
     if st.session_state.chassis:
@@ -189,6 +136,17 @@ def main():
         # Aviso sobre finalização
         if not st.session_state.get('operador_input'):
             st.warning("👆 **Digite o nome da loja na sidebar para finalizar**")
+        
+    else:
+        # Tela inicial quando não há chassis
+        st.info("""
+        **📋 Como usar:**
+        1. **🏪 Digite o nome da loja** na sidebar
+        2. **📝 Digite o chassi** no campo acima  
+        3. **➕ Clique em ADICIONAR CHASSI**
+        4. **📋 Acompanhe a lista** que vai aparecer
+        5. **✅ Clique em FINALIZAR** na sidebar
+        """)
 
 def registrar_chassi(chassi_numero):
     """Registra um chassi"""
@@ -233,6 +191,7 @@ def registrar_chassi(chassi_numero):
             st.session_state.chassis.append(registro)
             cur.close()
             conn.close()
+            st.rerun()
             
         except Exception as e:
             st.error(f"Erro na consulta: {str(e)}")
