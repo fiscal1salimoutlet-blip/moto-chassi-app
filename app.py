@@ -42,7 +42,7 @@ def main():
     # Cabeçalho simplificado - SEM IMAGEM E SEM "SALIM OUTLET" ABAIXO
     st.markdown("""
     <div style="margin-bottom: 20px;">
-        <h1 style="margin: 0; color: #2E86AB;">Controle de Scooters</h1>
+        <h1 style="margin: 0; color: #2e86ab;">Salim Outlet - Controle de Scooters</h1>
     </div>
     """, unsafe_allow_html=True)
     
