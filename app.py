@@ -39,10 +39,12 @@ def conectar_banco():
         return None
 
 def main():
-    # Cabeçalho simplificado - SEM IMAGEM E SEM "SALIM OUTLET" ABAIXO
+    # Cabeçalho com a cor correta #2e86ab
     st.markdown("""
     <div style="margin-bottom: 20px;">
-        <h1 style="margin: 0; color: #2e86ab;">Salim Outlet - Controle de Scooters</h1>
+        <h1 style="margin: 0; color: #2e86ab; font-size: 2.5rem; font-weight: bold;">
+            Salim Outlet - Controle de Scooters
+        </h1>
     </div>
     """, unsafe_allow_html=True)
     
