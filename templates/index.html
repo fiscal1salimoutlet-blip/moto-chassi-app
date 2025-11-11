@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Controle de Chassi</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .card { background: #f9f9f9; padding: 20px; margin: 10px 0; border-radius: 5px; }
+        button { background: #007bff; color: white; border: none; padding: 10px 15px; cursor: pointer; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background: #f2f2f2; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏍️ Controle de Chassi</h1>
+        
+        <div class="card">
+            <h3>Configurações</h3>
+            <input type="text" id="lojaInput" placeholder="Nome da Loja">
+            <button onclick="definirLoja()">Definir Loja</button>
+            <p id="lojaInfo"></p>
+        </div>
+
+        <div class="card">
+            <h3>Registrar Chassi</h3>
+            <input type="text" id="chassiInput" placeholder="Número do Chassi">
+            <button onclick="registrarChassi()">Adicionar Chassi</button>
+        </div>
+
+        <div id="listaChassis" style="display: none;">
+            <h3>Chassis Registrados</h3>
+            <table id="tabelaChassis">
+                <thead>
+                    <tr>
+                        <th>Chassi</th>
+                        <th>Data</th>
+                        <th>Descrição</th>
+                        <th>Modelo</th>
+                        <th>Montador</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+            
+            <button onclick="exportarExcel()">📥 Exportar Excel</button>
+            <button onclick="limparContagem()">🔄 Nova Contagem</button>
+        </div>
+
+        <div id="mensagens"></div>
+    </div>
+
+    <script>
+        let loja = '';
+        let chassis = [];
+
+        function definirLoja() {
+            const input = document.getElementById('lojaInput');
+            loja = input.value.trim();
+            if (loja) {
+                document.getElementById('lojaInfo').textContent = `Loja: ${loja} | Chassis: ${chassis.length}`;
+                mostrarMensagem(`Loja definida: ${loja}`, 'success');
+            }
+        }
+
+        function registrarChassi() {
+            if (!loja) {
+                mostrarMensagem('Defina o nome da loja primeiro!', 'error');
+                return;
+            }
+
+            const chassi = document.getElementById('chassiInput').value.trim();
+            if (!chassi) {
+                mostrarMensagem('Digite um número de chassi!', 'error');
+                return;
+            }
+
+            fetch('/api/registrar_chassi', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({chassi: chassi, loja: loja})
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    chassis.push(data.registro);
+                    atualizarTabela();
+                    document.getElementById('chassiInput').value = '';
+                    mostrarMensagem(`Chassi ${chassi} registrado!`, 'success');
+                } else {
+                    mostrarMensagem(data.error, 'error');
+                }
+            })
+            .catch(error => {
+                mostrarMensagem('Erro ao registrar chassi', 'error');
+            });
+        }
+
+        function atualizarTabela() {
+            const tbody = document.querySelector('#tabelaChassis tbody');
+            tbody.innerHTML = '';
+            
+            chassis.forEach(item => {
+                const row = tbody.insertRow();
+                row.insertCell(0).textContent = item.chassi;
+                row.insertCell(1).textContent = item.data;
+                row.insertCell(2).textContent = item.descricao;
+                row.insertCell(3).textContent = item.modelo;
+                row.insertCell(4).textContent = item.montador;
+                row.insertCell(5).textContent = item.status;
+            });
+
+            document.getElementById('listaChassis').style.display = 'block';
+            document.getElementById('lojaInfo').textContent = `Loja: ${loja} | Chassis: ${chassis.length}`;
+        }
+
+        function exportarExcel() {
+            window.location.href = '/api/exportar_excel';
+        }
+
+        function limparContagem() {
+            fetch('/api/limpar_contagem')
+            .then(() => {
+                chassis = [];
+                document.getElementById('listaChassis').style.display = 'none';
+                document.getElementById('lojaInfo').textContent = `Loja: ${loja} | Chassis: 0`;
+                mostrarMensagem('Contagem reiniciada!', 'success');
+            });
+        }
+
+        function mostrarMensagem(texto, tipo) {
+            const div = document.getElementById('mensagens');
+            div.innerHTML = `<div class="card" style="background: ${tipo === 'success' ? '#d4edda' : '#f8d7da'}">${texto}</div>`;
+            setTimeout(() => div.innerHTML = '', 3000);
+        }
+    </script>
+</body>
+</html>

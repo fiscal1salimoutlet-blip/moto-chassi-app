@@ -1,3 +1,5 @@
-streamlit==1.32.0
+flask==2.3.3
 pandas==2.1.0
 psycopg2-binary==2.9.7
+openpyxl==3.1.2
+gunicorn==21.2.0
