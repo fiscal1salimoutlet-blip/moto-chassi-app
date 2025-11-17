@@ -254,8 +254,11 @@ def main():
             setTimeout(focusScanInput, 100); // Tenta novamente após 100ms
         }
     </script>
-    """, unsafe_allow_html=True)  # Verifica se há um novo scan para registrar (modo automático)
-    # AQUI ESTÁ A MUDANÇA PRINCIPAL: Verifica se o input tem 13 dígitos   if (scan_input and 
+    """, unsafe_allow_html=True)
+    
+    # Verifica se há um novo scan para registrar (modo automático)
+    # AQUI ESTÁ A MUDANÇA PRINCIPAL: Verifica se o input tem 13 dígitos
+    if (scan_input and 
         scan_input.strip() and 
         scan_input != st.session_state.last_scan and
         len(scan_input.strip()) == 13): # Condição de 13 dígitos
