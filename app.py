@@ -302,96 +302,121 @@ def main():
     # Área principal - Formulário de leitura
     st.header("📝 Leitura de Código de Barras (EAN)")
     
-    # Container para o campo de leitura
-    scan_container = st.container()
-    
-    with scan_container:
-        # Campo de leitura único
-        scan_input = st.text_input(
-            "Digite o código de barras (EAN) ou use leitor:",
-            placeholder="⬅️ POSICIONE O LEITOR AQUI - O CAMPO ESTÁ PRONTO E COM FOCO AUTOMÁTICO",
-            key=f"scan_input_{st.session_state.input_key}",
-            label_visibility="visible"
-        )
-
-    # JavaScript SIMPLES e EFETIVO para auto foco
+    # JavaScript AGGRESSIVO para auto foco
     st.markdown("""
     <script>
-        // Função para focar no campo de texto do Streamlit
-        function focusStreamlitInput() {
-            // Encontra todos os inputs de texto
-            const inputs = window.parent.document.querySelectorAll('input[type="text"]');
+        // Função agressiva para focar no campo
+        function forceFocus() {
+            // Tenta várias estratégias para encontrar o campo
+            const selectors = [
+                'input[type="text"]',
+                'input[placeholder*="LEITOR"]',
+                'input[placeholder*="leitor"]',
+                '.stTextInput input',
+                'input'
+            ];
             
-            // Procura pelo input que tem o placeholder do leitor
-            for (let input of inputs) {
-                if (input.placeholder && input.placeholder.includes("POSICIONE O LEITOR")) {
-                    input.focus();
-                    input.select();
-                    console.log("Campo de scan focado!");
-                    return true;
+            for (let selector of selectors) {
+                const inputs = window.parent.document.querySelectorAll(selector);
+                for (let input of inputs) {
+                    if (input.offsetParent !== null) { // Verifica se está visível
+                        input.focus();
+                        input.select();
+                        console.log('Campo focado via selector:', selector);
+                        return true;
+                    }
                 }
             }
             return false;
         }
         
-        // Focar quando a página carrega
-        setTimeout(focusStreamlitInput, 100);
+        // Focar agressivamente
+        function aggressiveFocus() {
+            if (!forceFocus()) {
+                // Se não encontrou, tenta novamente
+                setTimeout(forceFocus, 50);
+                setTimeout(forceFocus, 200);
+                setTimeout(forceFocus, 500);
+                setTimeout(forceFocus, 1000);
+            }
+        }
         
-        // Focar sempre que o mouse se move (muito efetivo)
-        window.parent.document.addEventListener('mousemove', focusStreamlitInput);
+        // Executar quando a página carregar
+        setTimeout(aggressiveFocus, 100);
         
-        // Focar a cada segundo como backup
-        setInterval(focusStreamlitInput, 1000);
+        // Executar quando qualquer interação ocorrer
+        window.parent.document.addEventListener('click', aggressiveFocus);
+        window.parent.document.addEventListener('keydown', aggressiveFocus);
+        window.parent.document.addEventListener('mousemove', aggressiveFocus);
+        
+        // Executar periodicamente
+        setInterval(aggressiveFocus, 2000);
+        
+        // Executar quando a visibilidade da página mudar
+        document.addEventListener('visibilitychange', aggressiveFocus);
+        
     </script>
+    
+    <style>
+        /* Destacar visualmente o campo de entrada */
+        .stTextInput input:focus {
+            border: 3px solid #FF0000 !important;
+            box-shadow: 0 0 10px rgba(255, 0, 0, 0.5) !important;
+        }
+    </style>
     """, unsafe_allow_html=True)
+    
+    # Container para o campo de leitura
+    scan_container = st.container()
+    
+    with scan_container:
+        # Campo de leitura único - com estilo destacado
+        st.markdown("**Digite o código de barras (EAN) ou use leitor:**")
+        scan_input = st.text_input(
+            "",
+            placeholder="⬅️ POSICIONE O LEITOR AQUI - CAMPO COM FOCO AUTOMÁTICO",
+            key=f"scan_input_{st.session_state.input_key}",
+            label_visibility="collapsed"
+        )
 
-    # Verifica se há um novo scan para registrar
-    # Quando detecta 13 dígitos, processa automaticamente e limpa o campo
+    # Processamento automático quando detecta 13 dígitos
     if scan_input and len(scan_input.strip()) == 13:
         ean_numero = scan_input.strip()
         registrar_scan(ean_numero)
         # Incrementa a key para forçar novo campo limpo
         st.session_state.input_key += 1
-        # Força o rerun para limpar o campo e refocar
+        # Força o rerun para limpar o campo
         st.rerun()
 
-    # Instruções para uso com leitor de código de barras
+    # Instruções
     st.info("""
     **INSTRUÇÕES:**
-    - Posicione o leitor de código de barras no campo acima
-    - **O CAMPO JÁ ESTÁ COM FOCO AUTOMÁTICO** - não precisa clicar
-    - O sistema registra automaticamente códigos EAN de 13 dígitos
-    - **MESMO CÓDIGO PODE SER LID VÁRIAS VEZES** - cada scan é contado individualmente
-    - Após cada leitura, o campo é limpo automaticamente e pronto para a próxima
-    - Use o botão 'Nova Contagem' para reiniciar
-    - Use 'FINALIZAR CONTAGEM' para gerar relatório
+    - O campo acima **JÁ ESTÁ COM FOCO AUTOMÁTICO**
+    - Aponte o leitor e escaneie - não precisa clicar
+    - Quando ler 13 dígitos, processa automaticamente
+    - O campo é limpo e pronto para a próxima leitura
+    - **MESMO CÓDIGO PODE SER LID VÁRIAS VEZES**
     """)
 
-    # Sidebar FIXA
+    # Sidebar
     with st.sidebar:
         st.title("Contagem por SKU")
         
         st.divider()
         
-        # Campo para nome da loja
         operador = st.text_input(
             "🏪 Loja/Operador:",
             placeholder="Digite o nome da loja/operador",
             key="operador_input"
         )
         
-        # Contador
         st.metric("📋 Scans Registrados", len(st.session_state.scans))
         
         st.divider()
         
-        # Informação do modo automático
         st.info("🟢 **Modo Leitor Ativo**")
-        st.caption("Gravação automática ao ler EAN de 13 dígitos")
-        st.caption("✅ **Aceita múltiplas leituras do mesmo código**")
-        st.caption("🎯 **Foco automático no campo de leitura**")
+        st.caption("Foco automático ativo")
         
-        # Botão de nova contagem
         if st.button("🔄 Nova Contagem", use_container_width=True, type="secondary"):
             st.session_state.scans = []
             st.session_state.last_scan = ""
@@ -400,29 +425,24 @@ def main():
         
         st.divider()
         
-        # Botão finalizar (só aparece se tiver scans)
         if st.session_state.scans:
             if st.button("✅ FINALIZAR CONTAGEM", use_container_width=True, type="primary"):
                 if operador:
                     finalizar_contagem(operador)
                 else:
-                    st.warning("⚠️ Digite o nome da loja")
+                    st.warning("⚠️ Digite o nome da loja/operador")
 
-    # Lista de scans registrados
+    # Lista de scans
     if st.session_state.scans:
-        st.header("📋 Scans Registrados (Resumo)")
+        st.header("📋 Scans Registrados")
         
-        # Criar DataFrame para o sumário
         df_scans = pd.DataFrame(st.session_state.scans)
-        
-        # Agrupar e somar as quantidades
         df_sumario = df_scans.groupby(['sku', 'descricao']).size().reset_index(name='Quantidade')
         df_sumario.columns = ['SKU', 'Descrição', 'Quantidade']
         df_sumario = df_sumario.sort_values('Quantidade', ascending=False)
         
         st.dataframe(df_sumario, use_container_width=True, hide_index=True)
         
-        # Estatísticas rápidas
         col1, col2, col3 = st.columns(3)
         with col1:
             st.metric("Total de Scans", len(st.session_state.scans))
@@ -432,7 +452,6 @@ def main():
             total_unidades = df_sumario['Quantidade'].sum() if len(df_sumario) > 0 else 0
             st.metric("Total de Unidades", total_unidades)
             
-        # Aviso sobre finalização
         if not operador:
             st.warning("👆 **Digite o nome da loja/operador na sidebar para finalizar**")
 
