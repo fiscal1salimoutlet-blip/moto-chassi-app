@@ -220,8 +220,7 @@ def main():
             key=f"scan_input_{st.session_state.input_key}",
             label_visibility="visible"
         )
-        
-        # Injetando JavaScript para adicionar o ID ao elemento input real
+          # Injetando JavaScript para adicionar o ID ao elemento input real
         # O Streamlit não permite definir o ID diretamente, então usamos JS para encontrá-lo
         # e dar um ID fixo para o script de foco usar.
         st.markdown(f"""
@@ -231,7 +230,9 @@ def main():
                     inputElement.id = "{SCAN_INPUT_ID}";
                 }}
             </script>
-        """, unsafe_allow_html=    # JavaScript para focar no campo (Versão mais robusta)
+        """, unsafe_allow_html=True)
+
+    # JavaScript para focar no campo (Versão mais robusta)
     # O ID "ean_scan_input" é injetado no elemento input real logo acima
     st.markdown("""
     <script>
@@ -253,9 +254,7 @@ def main():
             setTimeout(focusScanInput, 100); // Tenta novamente após 100ms
         }
     </script>
-    """, unsafe_allow_html=True)
-    
-    # Verifica se há um novo scan para registrar (modo automático)
+    """, unsafe_allow_html=True)  # Verifica se há um novo scan para registrar (modo automático)
     # AQUI ESTÁ A MUDANÇA PRINCIPAL: Verifica se o input tem 13 dígitos   if (scan_input and 
         scan_input.strip() and 
         scan_input != st.session_state.last_scan and
