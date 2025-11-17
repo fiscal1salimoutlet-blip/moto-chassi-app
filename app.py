@@ -382,95 +382,62 @@ def main():
     # SE LOJA CONFIRMADA: Mostrar área de leitura EAN
     st.header("📝 2º - Leitura de Código de Barras (EAN)")
     
+    # JavaScript SIMPLES para foco automático
+    st.markdown("""
+    <script>
+        function focusEanInput() {
+            // Procura por inputs de texto e foca no primeiro que encontrar
+            const inputs = window.parent.document.querySelectorAll('input[type="text"]');
+            for (let input of inputs) {
+                if (input.offsetParent !== null) { // Verifica se está visível
+                    input.focus();
+                    input.select();
+                    break;
+                }
+            }
+        }
+        
+        // Focar quando a página carrega
+        setTimeout(focusEanInput, 100);
+        setTimeout(focusEanInput, 500);
+        
+        // Focar periodicamente
+        setInterval(focusEanInput, 2000);
+    </script>
+    """, unsafe_allow_html=True)
+
     # Container para o campo de leitura EAN
     scan_container = st.container()
     
     with scan_container:
-        # Campo de leitura EAN - SÓ APARECE SE LOJA CONFIRMADA
+        # ÚNICO campo de leitura EAN
         st.markdown("**Digite o código de barras (EAN) ou use leitor:**")
-        
-        # HTML personalizado com ID FIXO para o campo EAN
-        st.markdown("""
-        <div style="margin-bottom: 20px;">
-            <input 
-                type="text" 
-                id="ean_scan_field" 
-                placeholder="⬅️ POSICIONE O LEITOR AQUI - CAMPO PRONTO PARA ESCANEAMENTO" 
-                style="width: 100%; padding: 12px; font-size: 16px; border: 3px solid #4CAF50; border-radius: 5px; background-color: #f0fff0;"
-                autocomplete="off"
-            />
-        </div>
-        
-        <script>
-            // Foco automático no campo EAN
-            function focusEanField() {
-                const eanField = document.getElementById('ean_scan_field');
-                if (eanField) {
-                    eanField.focus();
-                    eanField.select();
-                }
-            }
-            
-            // Focar imediatamente e manter foco
-            focusEanField();
-            setTimeout(focusEanField, 100);
-            setTimeout(focusEanField, 500);
-            setInterval(focusEanField, 1000);
-            
-            // Focar quando houver qualquer interação
-            document.addEventListener('click', focusEanField);
-            document.addEventListener('keydown', focusEanField);
-            
-            // Capturar Enter e processar automaticamente
-            document.getElementById('ean_scan_field').addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    const value = this.value.trim();
-                    if (value.length === 13) {
-                        // Enviar para Streamlit
-                        window.location.href = `?ean=${value}&t=${new Date().getTime()}`;
-                        this.value = '';
-                        setTimeout(focusEanField, 100);
-                    }
-                }
-            });
-        </script>
-        """, unsafe_allow_html=True)
-    
-    # Também manter um campo Streamlit como fallback
-    with st.container():
-        scan_input_fallback = st.text_input(
-            "Campo alternativo (se necessário):",
-            placeholder="Use este campo se o superior não funcionar",
-            key=f"fallback_input_{st.session_state.input_key}",
+        scan_input = st.text_input(
+            "",
+            placeholder="⬅️ POSICIONE O LEITOR AQUI - CAMPO COM FOCO AUTOMÁTICO",
+            key=f"ean_input_{st.session_state.input_key}",
             label_visibility="collapsed"
         )
-        
-        # Processar o campo fallback
-        if scan_input_fallback and len(scan_input_fallback.strip()) == 13:
-            registrar_scan(scan_input_fallback.strip())
-            st.session_state.input_key += 1
-            st.rerun()
-    
-    # Processar EAN da URL (enviado pelo JavaScript)
-    query_params = st.experimental_get_query_params()
-    if 'ean' in query_params:
-        ean_value = query_params['ean'][0]
-        if len(ean_value) == 13:
-            registrar_scan(ean_value)
-            # Limpar parâmetro da URL
-            st.experimental_set_query_params()
-            st.rerun()
+
+    # Processamento automático quando detecta 13 dígitos
+    if scan_input and len(scan_input.strip()) == 13:
+        ean_numero = scan_input.strip()
+        registrar_scan(ean_numero)
+        # Incrementa a key para forçar novo campo limpo
+        st.session_state.input_key += 1
+        # Força o rerun para limpar o campo
+        st.rerun()
 
     # Instruções específicas para quando a loja está confirmada
-    st.info("""
+    st.info(f"""
     **INSTRUÇÕES DE ESCANEAMENTO:**
-    - **Loja:** {} - ✅ CONFIRMADA
-    - **Campo EAN:** Já está com foco automático
+    - **Loja:** {st.session_state.nome_loja} - ✅ CONFIRMADA
+    - **Campo EAN:** Já está com foco automático - não precisa clicar
     - **Aponte o leitor** e escaneie os produtos
     - **Cada beep** = 1 produto registrado
     - **Mesmo código** pode ser escaneado várias vezes
     - **Campo limpa automaticamente** após cada leitura
-    """.format(st.session_state.nome_loja))
+    """)
 
     # Lista de scans registrados - SÓ SE HOUVER SCANS
     if st.session_state.scans:
