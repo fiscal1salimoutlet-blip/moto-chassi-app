@@ -30,8 +30,6 @@ if 'last_scan' not in st.session_state:
     st.session_state.last_scan = ""
 if 'input_key' not in st.session_state:
     st.session_state.input_key = 0
-if 'auto_focus' not in st.session_state:
-    st.session_state.auto_focus = True
 
 def conectar_banco():
     """Conecta ao banco Neon"""
@@ -304,98 +302,91 @@ def main():
     # Área principal - Formulário de leitura
     st.header("📝 Leitura de Código de Barras (EAN)")
     
-    # Container para o campo de leitura
-    scan_container = st.container()
-    
-    with scan_container:
-        # Campo de leitura com key dinâmica
-        scan_input = st.text_input(
-            "Digite o código de barras (EAN) ou use leitor:",
-            placeholder="⬅️ POSICIONE O LEITOR AQUI - O CAMPO ESTÁ PRONTO E COM FOCO AUTOMÁTICO",
-            key=f"scan_input_{st.session_state.input_key}",
-            label_visibility="visible"
-        )
-
-    # JavaScript para auto foco - Versão MELHORADA com ID fixo
+    # SOLUÇÃO DEFINITIVA PARA AUTO FOCO
     st.markdown("""
+    <div style="margin-bottom: 20px;">
+        <label for="ean_input" style="font-weight: bold; display: block; margin-bottom: 8px;">
+            Digite o código de barras (EAN) ou use leitor:
+        </label>
+        <input 
+            type="text" 
+            id="ean_input" 
+            placeholder="⬅️ POSICIONE O LEITOR AQUI - O CAMPO ESTÁ PRONTO E COM FOCO AUTOMÁTICO" 
+            style="width: 100%; padding: 12px; font-size: 16px; border: 2px solid #4CAF50; border-radius: 5px;"
+            autocomplete="off"
+        />
+    </div>
+    
     <script>
-        // Função para encontrar e focar no campo de scan
-        function focusScanInput() {
-            // Procura por inputs do Streamlit
-            const inputs = window.parent.document.querySelectorAll('input[type="text"]');
-            let targetInput = null;
-            
-            // Tenta encontrar o input pelo placeholder
-            for (let input of inputs) {
-                if (input.placeholder && input.placeholder.includes("POSICIONE O LEITOR")) {
-                    targetInput = input;
-                    break;
-                }
+        // Foco automático garantido
+        function focusEanInput() {
+            const input = document.getElementById('ean_input');
+            if (input) {
+                input.focus();
+                input.select();
             }
-            
-            // Se não encontrou pelo placeholder, pega o primeiro input vazio
-            if (!targetInput) {
-                for (let input of inputs) {
-                    if (input.value === "") {
-                        targetInput = input;
-                        break;
-                    }
-                }
-            }
-            
-            // Se encontrou um input, foca nele
-            if (targetInput) {
-                // Define um ID fixo para facilitar futuras buscas
-                targetInput.id = "ean_scan_input_fixed";
-                targetInput.focus();
-                targetInput.select();
-                console.log("Campo de scan focado com sucesso!");
-                return true;
-            }
-            return false;
         }
         
-        // Tenta focar múltiplas vezes para garantir
-        setTimeout(focusScanInput, 100);
-        setTimeout(focusScanInput, 500);
-        setTimeout(focusScanInput, 1000);
-        setTimeout(focusScanInput, 2000);
+        // Focar imediatamente e repetidamente
+        focusEanInput();
+        setTimeout(focusEanInput, 100);
+        setTimeout(focusEanInput, 500);
+        setTimeout(focusEanInput, 1000);
         
-        // Foca quando a página ganha foco
-        window.parent.addEventListener('focus', focusScanInput);
+        // Focar quando a página ganha foco
+        window.addEventListener('focus', focusEanInput);
         
-        // Foca quando clicar em qualquer lugar da página
-        window.parent.document.addEventListener('click', function() {
-            setTimeout(focusScanInput, 100);
+        // Focar quando clicar em qualquer lugar
+        document.addEventListener('click', focusEanInput);
+        
+        // Focar a cada 2 segundos (backup)
+        setInterval(focusEanInput, 2000);
+        
+        // Capturar Enter e enviar para Streamlit
+        document.getElementById('ean_input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                const value = this.value.trim();
+                if (value.length === 13) {
+                    // Enviar para Streamlit via window.location
+                    window.location.href = `?ean=${value}&t=${new Date().getTime()}`;
+                    this.value = '';
+                    focusEanInput();
+                }
+            }
         });
-        
-        // Foca periodicamente a cada 3 segundos (como fallback)
-        setInterval(focusScanInput, 3000);
-        
     </script>
     """, unsafe_allow_html=True)
-
-    # Verifica se há um novo scan para registrar (modo automático)
-    # REMOVIDA A VERIFICAÇÃO DE "scan_input != st.session_state.last_scan" 
-    # para permitir múltiplas leituras do mesmo código
-    scan_valido = (
-        scan_input and 
-        scan_input.strip() and 
-        len(scan_input.strip()) == 13
-    )
     
-    if scan_valido:
-        st.session_state.last_scan = scan_input
-        registrar_scan(scan_input.strip())
-        # Incrementa a key para forçar novo campo limpo
-        st.session_state.input_key += 1
-        # Força o rerun para limpar o campo
-        st.rerun()
+    # Verificar se há parâmetro EAN na URL (enviado pelo JavaScript)
+    query_params = st.experimental_get_query_params()
+    if 'ean' in query_params:
+        ean_value = query_params['ean'][0]
+        if len(ean_value) == 13:
+            registrar_scan(ean_value)
+            st.session_state.input_key += 1
+            # Limpar parâmetro da URL
+            st.experimental_set_query_params()
+            st.rerun()
+
+    # Também manter o campo do Streamlit como fallback
+    with st.container():
+        scan_input_fallback = st.text_input(
+            "Ou digite aqui (fallback):",
+            placeholder="Se o campo acima não funcionar, use este",
+            key=f"fallback_input_{st.session_state.input_key}",
+            label_visibility="collapsed"
+        )
+        
+        # Verificar o campo fallback também
+        if scan_input_fallback and len(scan_input_fallback.strip()) == 13:
+            registrar_scan(scan_input_fallback.strip())
+            st.session_state.input_key += 1
+            st.rerun()
 
     # Instruções para uso com leitor de código de barras
     st.info("""
     **INSTRUÇÕES:**
-    - Posicione o leitor de código de barras no campo acima
+    - **CAMPO SUPERIOR**: Posicione o leitor de código de barras no campo verde acima
     - O sistema registra automaticamente códigos EAN de 13 dígitos
     - **MESMO CÓDIGO PODE SER LID VÁRIAS VEZES** - cada scan é contado individualmente
     - Cada scan válido será adicionado à lista abaixo
