@@ -349,7 +349,7 @@ def main():
             
             st.divider()
             
-            st.info("🟢 **Modo Leitor Ativo**")
+            st.info("🟢 **Sistema Ativo**")
             st.caption("Loja confirmada - Campo EAN liberado")
             st.caption("✅ Aceita múltiplas leituras do mesmo código")
             
@@ -382,42 +382,22 @@ def main():
     # SE LOJA CONFIRMADA: Mostrar área de leitura EAN
     st.header("📝 2º - Leitura de Código de Barras (EAN)")
     
-    # JavaScript SIMPLES para foco automático
-    st.markdown("""
-    <script>
-        function focusEanInput() {
-            // Procura por inputs de texto e foca no primeiro que encontrar
-            const inputs = window.parent.document.querySelectorAll('input[type="text"]');
-            for (let input of inputs) {
-                if (input.offsetParent !== null) { // Verifica se está visível
-                    input.focus();
-                    input.select();
-                    break;
-                }
-            }
-        }
-        
-        // Focar quando a página carrega
-        setTimeout(focusEanInput, 100);
-        setTimeout(focusEanInput, 500);
-        
-        // Focar periodicamente
-        setInterval(focusEanInput, 2000);
-    </script>
-    """, unsafe_allow_html=True)
-
     # Container para o campo de leitura EAN
     scan_container = st.container()
     
     with scan_container:
-        # ÚNICO campo de leitura EAN
+        # ÚNICO campo de leitura EAN - SEM JavaScript
         st.markdown("**Digite o código de barras (EAN) ou use leitor:**")
-        scan_input = st.text_input(
-            "",
-            placeholder="⬅️ POSICIONE O LEITOR AQUI - CAMPO COM FOCO AUTOMÁTICO",
-            key=f"ean_input_{st.session_state.input_key}",
-            label_visibility="collapsed"
-        )
+        
+        # Usando columns para centralizar e destacar o campo
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col2:
+            scan_input = st.text_input(
+                "",
+                placeholder="⬅️ POSICIONE O LEITOR AQUI",
+                key=f"ean_input_{st.session_state.input_key}",
+                label_visibility="collapsed"
+            )
 
     # Processamento automático quando detecta 13 dígitos
     if scan_input and len(scan_input.strip()) == 13:
@@ -432,7 +412,7 @@ def main():
     st.info(f"""
     **INSTRUÇÕES DE ESCANEAMENTO:**
     - **Loja:** {st.session_state.nome_loja} - ✅ CONFIRMADA
-    - **Campo EAN:** Já está com foco automático - não precisa clicar
+    - **Clique no campo acima** ou use **TAB** para focar
     - **Aponte o leitor** e escaneie os produtos
     - **Cada beep** = 1 produto registrado
     - **Mesmo código** pode ser escaneado várias vezes
