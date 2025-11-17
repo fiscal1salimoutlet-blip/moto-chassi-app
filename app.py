@@ -249,36 +249,28 @@ def main():
         }
 
         // Tenta focar imediatamente e depois de um pequeno atraso para garantir
-        // que o elemento foi renderizado após o st.rerun()
-        if (!focusScanInput()) {
-            setTimeout(focusScanInput, 100); // Tenta novamente após 100ms
-        }
-    </script>
-    """, unsafe_allow_html=True)
-    
-    # Verifica se há um novo scan para registrar (modo automático)
-    # AQUI ESTÁ A MUDANÇA PRINCIPAL: Verifica se o input t261	    if (scan_input and 
+        // que o elemento foi renderizado após o st.re253	        if (!focusScanInput()) {
+254	            setTimeout(focusScanInput, 100); // Tenta novamente após 100ms
+255	        }
+256	    </script>
+257	    """, unsafe_allow_html=True)
+258	    
+259	    # Verifica se há um novo scan para registrar (modo automático)
+260	    # AQUI ESTÁ A MUDANÇA PRINCIPAL: Verifica se o input tem 13 dígitos
+261	    if (scan_input and 
 262	        scan_input.strip() and 
 263	        scan_input != st.session_state.last_scan and
-264	        len(scan_input.strip()) == 13): # Condição de 13 dígitos       
-        st.session_state.last_scan = scan_input
-        registrar_scan(scan_input.strip())
-        # Incrementa a key para forçar novo campo limpo
-        st.session_state.input_key += 1
-        # Força o rerun para limpar o campo
-        st.rerun()
-    
-    # Instruções para uso com leitor de código de barras
-    st.success("""
-    **🎯 MODO LEITOR DE CÓDIGO DE BARRAS ATIVADO**
-    
-    **→ POSICIONE O LEITOR NO CAMPO ACIMA ←**
-    
-    - ✅ **Gravação automática** a cada leitura de **13 dígitos (EAN)**
-    - ✅ **Campo limpo** após cada registro
-    - ✅ **Pronto para próxima leitura**
-    
-    *Dica: Se o campo não estiver com foco, clique uma vez nele e depois use o leitor.*
+264	        len(scan_input.strip()) == 13): # Condição de 13 dígitos
+265	        
+266	        st.session_state.last_scan = scan_input
+267	        registrar_scan(scan_input.strip())
+268	        # Incrementa a key para forçar novo campo limpo
+269	        st.session_state.input_key += 1
+270	        # Força o rerun para limpar o campo
+271	        st.rerun()
+272	
+273	    # Instruções para uso com leitor de código de barras
+274	    st.success(""" use o leitor.*
     """)
 
     # Sidebar FIXA
