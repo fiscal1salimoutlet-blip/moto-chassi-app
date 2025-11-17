@@ -139,33 +139,50 @@ def main():
     
     with scan_container:
         # Campo de leitura com key dinâmica
+        # Adicionando um ID HTML previsível ao campo de entrada para o JS focar
+        SCAN_INPUT_ID = "ean_scan_input"
+        
         scan_input = st.text_input(
             "Digite o código de barras (EAN) ou use leitor:",
             placeholder="⬅️ POSICIONE O LEITOR AQUI - O CAMPO ESTÁ PRONTO",
             key=f"scan_input_{st.session_state.input_key}",
             label_visibility="visible"
         )
-    
-    # JavaScript para focar no campo (mantido)
+        
+        # Injetando JavaScript para adicionar o ID ao elemento input real
+        # O Streamlit não permite definir o ID diretamente, então usamos JS para encontrá-lo
+        # e dar um ID fixo para o script de foco usar.
+        st.markdown(f"""
+            <script>
+                const inputElement = document.querySelector('[data-testid="stTextInput"] input[type="text"]');
+                if (inputElement) {{
+                    inputElement.id = "{SCAN_INPUT_ID}";
+                }}
+            </script>
+        """, unsafe_allow_html=True)
+       # JavaScript para focar no campo (Versão mais robusta)
+    # O ID "ean_scan_input" é injetado no elemento input real logo acima
     st.markdown("""
     <script>
-        // Espera a página carregar e tenta focar no campo
-        setTimeout(function() {
-            // Procura por inputs com placeholder que contenha "leitor"
-            const inputs = document.querySelectorAll('input');
-            for (let input of inputs) {
-                if (input.placeholder && input.placeholder.includes('LEITOR')) {
-                    input.focus();
-                    input.select();
-                    console.log('Campo de leitura focado');
-                    break;
-                }
+        // Função para tentar focar o campo
+        function focusScanInput() {
+            const input = document.getElementById('ean_scan_input');
+            if (input) {
+                input.focus();
+                input.select();
+                console.log('Campo de leitura focado via ID fixo');
+                return true;
             }
-        }, 1000);
+            return false;
+        }
+
+        // Tenta focar imediatamente e depois de um pequeno atraso para garantir
+        // que o elemento foi renderizado após o st.rerun()
+        if (!focusScanInput()) {
+            setTimeout(focusScanInput, 100); // Tenta novamente após 100ms
+        }
     </script>
-    """, unsafe_allow_html=True)
-    
-    # Verifica se há um novo scan para registrar (modo automático)
+    """, unsafe_allow_html=True) Verifica se há um novo scan para registrar (modo automático)
     # AQUI ESTÁ A MUDANÇA PRINCIPAL: Verifica se o input tem 13 dígitos
     if (scan_input and 
         scan_input.strip() and 
