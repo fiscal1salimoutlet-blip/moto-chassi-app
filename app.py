@@ -302,94 +302,67 @@ def main():
     # Área principal - Formulário de leitura
     st.header("📝 Leitura de Código de Barras (EAN)")
     
-    # SOLUÇÃO DEFINITIVA PARA AUTO FOCO
-    st.markdown("""
-    <div style="margin-bottom: 20px;">
-        <label for="ean_input" style="font-weight: bold; display: block; margin-bottom: 8px;">
-            Digite o código de barras (EAN) ou use leitor:
-        </label>
-        <input 
-            type="text" 
-            id="ean_input" 
-            placeholder="⬅️ POSICIONE O LEITOR AQUI - O CAMPO ESTÁ PRONTO E COM FOCO AUTOMÁTICO" 
-            style="width: 100%; padding: 12px; font-size: 16px; border: 2px solid #4CAF50; border-radius: 5px;"
-            autocomplete="off"
-        />
-    </div>
+    # Container para o campo de leitura
+    scan_container = st.container()
     
+    with scan_container:
+        # Campo de leitura único
+        scan_input = st.text_input(
+            "Digite o código de barras (EAN) ou use leitor:",
+            placeholder="⬅️ POSICIONE O LEITOR AQUI - O CAMPO ESTÁ PRONTO E COM FOCO AUTOMÁTICO",
+            key=f"scan_input_{st.session_state.input_key}",
+            label_visibility="visible"
+        )
+
+    # JavaScript SIMPLES e EFETIVO para auto foco
+    st.markdown("""
     <script>
-        // Foco automático garantido
-        function focusEanInput() {
-            const input = document.getElementById('ean_input');
-            if (input) {
-                input.focus();
-                input.select();
-            }
-        }
-        
-        // Focar imediatamente e repetidamente
-        focusEanInput();
-        setTimeout(focusEanInput, 100);
-        setTimeout(focusEanInput, 500);
-        setTimeout(focusEanInput, 1000);
-        
-        // Focar quando a página ganha foco
-        window.addEventListener('focus', focusEanInput);
-        
-        // Focar quando clicar em qualquer lugar
-        document.addEventListener('click', focusEanInput);
-        
-        // Focar a cada 2 segundos (backup)
-        setInterval(focusEanInput, 2000);
-        
-        // Capturar Enter e enviar para Streamlit
-        document.getElementById('ean_input').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                const value = this.value.trim();
-                if (value.length === 13) {
-                    // Enviar para Streamlit via window.location
-                    window.location.href = `?ean=${value}&t=${new Date().getTime()}`;
-                    this.value = '';
-                    focusEanInput();
+        // Função para focar no campo de texto do Streamlit
+        function focusStreamlitInput() {
+            // Encontra todos os inputs de texto
+            const inputs = window.parent.document.querySelectorAll('input[type="text"]');
+            
+            // Procura pelo input que tem o placeholder do leitor
+            for (let input of inputs) {
+                if (input.placeholder && input.placeholder.includes("POSICIONE O LEITOR")) {
+                    input.focus();
+                    input.select();
+                    console.log("Campo de scan focado!");
+                    return true;
                 }
             }
-        });
+            return false;
+        }
+        
+        // Focar quando a página carrega
+        setTimeout(focusStreamlitInput, 100);
+        
+        // Focar sempre que o mouse se move (muito efetivo)
+        window.parent.document.addEventListener('mousemove', focusStreamlitInput);
+        
+        // Focar a cada segundo como backup
+        setInterval(focusStreamlitInput, 1000);
     </script>
     """, unsafe_allow_html=True)
-    
-    # Verificar se há parâmetro EAN na URL (enviado pelo JavaScript)
-    query_params = st.experimental_get_query_params()
-    if 'ean' in query_params:
-        ean_value = query_params['ean'][0]
-        if len(ean_value) == 13:
-            registrar_scan(ean_value)
-            st.session_state.input_key += 1
-            # Limpar parâmetro da URL
-            st.experimental_set_query_params()
-            st.rerun()
 
-    # Também manter o campo do Streamlit como fallback
-    with st.container():
-        scan_input_fallback = st.text_input(
-            "Ou digite aqui (fallback):",
-            placeholder="Se o campo acima não funcionar, use este",
-            key=f"fallback_input_{st.session_state.input_key}",
-            label_visibility="collapsed"
-        )
-        
-        # Verificar o campo fallback também
-        if scan_input_fallback and len(scan_input_fallback.strip()) == 13:
-            registrar_scan(scan_input_fallback.strip())
-            st.session_state.input_key += 1
-            st.rerun()
+    # Verifica se há um novo scan para registrar
+    # Quando detecta 13 dígitos, processa automaticamente e limpa o campo
+    if scan_input and len(scan_input.strip()) == 13:
+        ean_numero = scan_input.strip()
+        registrar_scan(ean_numero)
+        # Incrementa a key para forçar novo campo limpo
+        st.session_state.input_key += 1
+        # Força o rerun para limpar o campo e refocar
+        st.rerun()
 
     # Instruções para uso com leitor de código de barras
     st.info("""
     **INSTRUÇÕES:**
-    - **CAMPO SUPERIOR**: Posicione o leitor de código de barras no campo verde acima
+    - Posicione o leitor de código de barras no campo acima
+    - **O CAMPO JÁ ESTÁ COM FOCO AUTOMÁTICO** - não precisa clicar
     - O sistema registra automaticamente códigos EAN de 13 dígitos
     - **MESMO CÓDIGO PODE SER LID VÁRIAS VEZES** - cada scan é contado individualmente
-    - Cada scan válido será adicionado à lista abaixo
+    - Após cada leitura, o campo é limpo automaticamente e pronto para a próxima
     - Use o botão 'Nova Contagem' para reiniciar
     - Use 'FINALIZAR CONTAGEM' para gerar relatório
     """)
@@ -416,6 +389,7 @@ def main():
         st.info("🟢 **Modo Leitor Ativo**")
         st.caption("Gravação automática ao ler EAN de 13 dígitos")
         st.caption("✅ **Aceita múltiplas leituras do mesmo código**")
+        st.caption("🎯 **Foco automático no campo de leitura**")
         
         # Botão de nova contagem
         if st.button("🔄 Nova Contagem", use_container_width=True, type="secondary"):
@@ -432,7 +406,7 @@ def main():
                 if operador:
                     finalizar_contagem(operador)
                 else:
-                    st.warning("⚠️ Digite o nome da loja/operador")
+                    st.warning("⚠️ Digite o nome da loja")
 
     # Lista de scans registrados
     if st.session_state.scans:
