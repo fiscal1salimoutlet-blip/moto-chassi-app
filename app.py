@@ -3,12 +3,11 @@ import pandas as pd
 import psycopg2
 from datetime import datetime, timezone, timedelta
 import os
-# Removendo imports de email, pois o usuário quer um Excel simplificado e não mencionou email
-# import smtplib
-# from email.mime.multipart import MIMEMultipart
-# from email.mime.base import MIMEBase
-# from email.mime.text import MIMEText
-# from email import encoders
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.base import MIMEBase
+from email.mime.text import MIMEText
+from email import encoders
 
 # Importar para formatação do Excel
 from openpyxl import Workbook
@@ -103,7 +102,80 @@ def criar_excel_formatado(df_sumario, operador):
     wb.save(filename)
     return filename
 
-# Função de email removida
+def enviar_email_automatico(arquivo, operador, df_sumario, total_scans, encontrados, nao_encontrados):
+    """Envia email automaticamente com o sumário simplificado"""
+    try:
+        # Verificar se as configurações de email existem
+        required_secrets = ["EMAIL_FROM", "EMAIL_PASSWORD", "SMTP_SERVER", "SMTP_PORT"]
+        missing_secrets = [secret for secret in required_secrets if secret not in st.secrets]
+        
+        if missing_secrets:
+            st.warning(f"⚠️ Email não configurado. Faltando: {', '.join(missing_secrets)}")
+            return False
+        
+        # Lista de emails fixa
+        emails_destino = st.secrets.get("EMAIL_TO", "contagem.salimoutlet@gmail.com").split(",")
+        emails_destino = [email.strip() for email in emails_destino if email.strip()]
+        
+        # Preparar email - ASSUNTO DINÂMICO COM NOME DA LOJA
+        msg = MIMEMultipart()
+        msg['From'] = st.secrets["EMAIL_FROM"]
+        msg['To'] = ", ".join(emails_destino)
+        msg['Subject'] = f"Relatório de Contagem SKU - {operador} - {datetime.now(fuso_brasilia).strftime('%d/%m/%Y')}"
+        
+        # Estatísticas para o email
+        total_skus = len(df_sumario)
+        total_unidades = df_sumario['Quantidade'].sum() if len(df_sumario) > 0 else 0
+        
+        # Corpo do email
+        body = f"""
+        RELATÓRIO DE CONTAGEM POR SKU - SALIM OUTLET
+        
+        Data: {datetime.now(fuso_brasilia).strftime('%d/%m/%Y %H:%M')}
+        Loja/Operador: {operador}
+        
+        RESUMO:
+        • Total de Scans: {total_scans}
+        • Encontrados: {encontrados}
+        • Não encontrados: {nao_encontrados}
+        • SKUs diferentes: {total_skus}
+        • Total de Unidades Contadas: {total_unidades}
+        
+        O arquivo Excel em anexo contém o sumário final por SKU (SKU, Descrição, Quantidade).
+        
+        --
+        Sistema de Controle de Contagem por SKU
+        Salim Outlet
+        """
+        
+        msg.attach(MIMEText(body, 'plain'))
+        
+        # Anexar arquivo
+        with open(arquivo, "rb") as f:
+            part = MIMEBase('application', 'octet-stream')
+            part.set_payload(f.read())
+        encoders.encode_base64(part)
+        part.add_header('Content-Disposition', f'attachment; filename="{arquivo}"')
+        msg.attach(part)
+        
+        # Enviar email
+        try:
+            server = smtplib.SMTP_SSL(st.secrets["SMTP_SERVER"], int(st.secrets["SMTP_PORT"]))
+            server.login(st.secrets["EMAIL_FROM"], st.secrets["EMAIL_PASSWORD"])
+            server.send_message(msg)
+            server.quit()
+        except:
+            server = smtplib.SMTP(st.secrets["SMTP_SERVER"], int(st.secrets["SMTP_PORT"]))
+            server.starttls()
+            server.login(st.secrets["EMAIL_FROM"], st.secrets["EMAIL_PASSWORD"])
+            server.send_message(msg)
+            server.quit()
+        
+        return True
+        
+    except Exception as e:
+        st.error(f"❌ Erro no envio de email: {str(e)}")
+        return False
 
 def main():
     # Cabeçalho
@@ -159,8 +231,7 @@ def main():
                     inputElement.id = "{SCAN_INPUT_ID}";
                 }}
             </script>
-        """, unsafe_allow_html=True)
-       # JavaScript para focar no campo (Versão mais robusta)
+        """, unsafe_allow_html=    # JavaScript para focar no campo (Versão mais robusta)
     # O ID "ean_scan_input" é injetado no elemento input real logo acima
     st.markdown("""
     <script>
@@ -182,9 +253,10 @@ def main():
             setTimeout(focusScanInput, 100); // Tenta novamente após 100ms
         }
     </script>
-    """, unsafe_allow_html=True) Verifica se há um novo scan para registrar (modo automático)
-    # AQUI ESTÁ A MUDANÇA PRINCIPAL: Verifica se o input tem 13 dígitos
-    if (scan_input and 
+    """, unsafe_allow_html=True)
+    
+    # Verifica se há um novo scan para registrar (modo automático)
+    # AQUI ESTÁ A MUDANÇA PRINCIPAL: Verifica se o input tem 13 dígitos   if (scan_input and 
         scan_input.strip() and 
         scan_input != st.session_state.last_scan and
         len(scan_input.strip()) == 13): # Condição de 13 dígitos
@@ -336,6 +408,9 @@ def finalizar_contagem(operador):
         
         # 3. Gerar Excel FORMATADO (simplificado)
         filename = criar_excel_formatado(df_sumario, operador)
+        
+        # 4. Enviar email automático
+        enviar_email_automatico(filename, operador, df_sumario, total_scans, encontrados, nao_encontrados)
         
         # Mostrar sucesso
         st.balloons()
