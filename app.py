@@ -30,6 +30,8 @@ if 'last_scan' not in st.session_state:
     st.session_state.last_scan = ""
 if 'input_key' not in st.session_state:
     st.session_state.input_key = 0
+if 'auto_focus' not in st.session_state:
+    st.session_state.auto_focus = True
 
 def conectar_banco():
     """Conecta ao banco Neon"""
@@ -176,7 +178,7 @@ def enviar_email_automatico(arquivo, operador, df_sumario, total_scans, encontra
         return False
 
 def registrar_scan(ean_numero):
-    """Registra um scan de EAN"""
+    """Registra um scan de EAN - ACEITA MÚLTIPLAS LEITURAS DO MESMO CÓDIGO"""
     if not ean_numero:
         return
         
@@ -208,6 +210,7 @@ def registrar_scan(ean_numero):
                 }
                 st.error(f"❌ {ean_numero} - Não encontrado")
             
+            # SEMPRE adiciona o registro, mesmo que seja o mesmo EAN
             st.session_state.scans.append(registro)
             cur.close()
             conn.close()
@@ -301,6 +304,30 @@ def main():
     # Área principal - Formulário de leitura
     st.header("📝 Leitura de Código de Barras (EAN)")
     
+    # JavaScript para auto foco - Versão melhorada
+    st.markdown("""
+    <script>
+        function focusScanInput() {
+            const inputs = parent.document.querySelectorAll('input[type=text]');
+            for (let input of inputs) {
+                if (input.value === "" || input.placeholder.includes("POSICIONE O LEITOR")) {
+                    input.focus();
+                    input.select();
+                    break;
+                }
+            }
+        }
+        
+        // Tenta focar imediatamente e depois de um delay
+        setTimeout(focusScanInput, 100);
+        setTimeout(focusScanInput, 500);
+        setTimeout(focusScanInput, 1000);
+        
+        // Também foca quando o mouse passa sobre a área
+        document.addEventListener('mousemove', focusScanInput);
+    </script>
+    """, unsafe_allow_html=True)
+    
     # Container para o campo de leitura
     scan_container = st.container()
     
@@ -308,16 +335,17 @@ def main():
         # Campo de leitura com key dinâmica
         scan_input = st.text_input(
             "Digite o código de barras (EAN) ou use leitor:",
-            placeholder="⬅️ POSICIONE O LEITOR AQUI - O CAMPO ESTÁ PRONTO",
+            placeholder="⬅️ POSICIONE O LEITOR AQUI - O CAMPO ESTÁ PRONTO E COM FOCO AUTOMÁTICO",
             key=f"scan_input_{st.session_state.input_key}",
             label_visibility="visible"
         )
 
     # Verifica se há um novo scan para registrar (modo automático)
+    # REMOVIDA A VERIFICAÇÃO DE "scan_input != st.session_state.last_scan" 
+    # para permitir múltiplas leituras do mesmo código
     scan_valido = (
         scan_input and 
         scan_input.strip() and 
-        scan_input != st.session_state.last_scan and
         len(scan_input.strip()) == 13
     )
     
@@ -334,6 +362,7 @@ def main():
     **INSTRUÇÕES:**
     - Posicione o leitor de código de barras no campo acima
     - O sistema registra automaticamente códigos EAN de 13 dígitos
+    - **MESMO CÓDIGO PODE SER LID VÁRIAS VEZES** - cada scan é contado individualmente
     - Cada scan válido será adicionado à lista abaixo
     - Use o botão 'Nova Contagem' para reiniciar
     - Use 'FINALIZAR CONTAGEM' para gerar relatório
@@ -360,6 +389,7 @@ def main():
         # Informação do modo automático
         st.info("🟢 **Modo Leitor Ativo**")
         st.caption("Gravação automática ao ler EAN de 13 dígitos")
+        st.caption("✅ **Aceita múltiplas leituras do mesmo código**")
         
         # Botão de nova contagem
         if st.button("🔄 Nova Contagem", use_container_width=True, type="secondary"):
@@ -393,11 +423,14 @@ def main():
         st.dataframe(df_sumario, use_container_width=True, hide_index=True)
         
         # Estatísticas rápidas
-        col1, col2 = st.columns(2)
+        col1, col2, col3 = st.columns(3)
         with col1:
             st.metric("Total de Scans", len(st.session_state.scans))
         with col2:
             st.metric("SKUs Diferentes", len(df_sumario))
+        with col3:
+            total_unidades = df_sumario['Quantidade'].sum() if len(df_sumario) > 0 else 0
+            st.metric("Total de Unidades", total_unidades)
             
         # Aviso sobre finalização
         if not operador:
