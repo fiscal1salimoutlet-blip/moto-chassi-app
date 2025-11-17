@@ -30,6 +30,10 @@ if 'last_scan' not in st.session_state:
     st.session_state.last_scan = ""
 if 'input_key' not in st.session_state:
     st.session_state.input_key = 0
+if 'loja_confirmada' not in st.session_state:
+    st.session_state.loja_confirmada = False
+if 'nome_loja' not in st.session_state:
+    st.session_state.nome_loja = ""
 
 def conectar_banco():
     """Conecta ao banco Neon"""
@@ -299,150 +303,190 @@ def main():
     
     st.divider()
     
-    # Área principal - Formulário de leitura
-    st.header("📝 Leitura de Código de Barras (EAN)")
-    
-    # JavaScript AGGRESSIVO para auto foco
-    st.markdown("""
-    <script>
-        // Função agressiva para focar no campo
-        function forceFocus() {
-            // Tenta várias estratégias para encontrar o campo
-            const selectors = [
-                'input[type="text"]',
-                'input[placeholder*="LEITOR"]',
-                'input[placeholder*="leitor"]',
-                '.stTextInput input',
-                'input'
-            ];
-            
-            for (let selector of selectors) {
-                const inputs = window.parent.document.querySelectorAll(selector);
-                for (let input of inputs) {
-                    if (input.offsetParent !== null) { // Verifica se está visível
-                        input.focus();
-                        input.select();
-                        console.log('Campo focado via selector:', selector);
-                        return true;
-                    }
-                }
-            }
-            return false;
-        }
-        
-        // Focar agressivamente
-        function aggressiveFocus() {
-            if (!forceFocus()) {
-                // Se não encontrou, tenta novamente
-                setTimeout(forceFocus, 50);
-                setTimeout(forceFocus, 200);
-                setTimeout(forceFocus, 500);
-                setTimeout(forceFocus, 1000);
-            }
-        }
-        
-        // Executar quando a página carregar
-        setTimeout(aggressiveFocus, 100);
-        
-        // Executar quando qualquer interação ocorrer
-        window.parent.document.addEventListener('click', aggressiveFocus);
-        window.parent.document.addEventListener('keydown', aggressiveFocus);
-        window.parent.document.addEventListener('mousemove', aggressiveFocus);
-        
-        // Executar periodicamente
-        setInterval(aggressiveFocus, 2000);
-        
-        // Executar quando a visibilidade da página mudar
-        document.addEventListener('visibilitychange', aggressiveFocus);
-        
-    </script>
-    
-    <style>
-        /* Destacar visualmente o campo de entrada */
-        .stTextInput input:focus {
-            border: 3px solid #FF0000 !important;
-            box-shadow: 0 0 10px rgba(255, 0, 0, 0.5) !important;
-        }
-    </style>
-    """, unsafe_allow_html=True)
-    
-    # Container para o campo de leitura
-    scan_container = st.container()
-    
-    with scan_container:
-        # Campo de leitura único - com estilo destacado
-        st.markdown("**Digite o código de barras (EAN) ou use leitor:**")
-        scan_input = st.text_input(
-            "",
-            placeholder="⬅️ POSICIONE O LEITOR AQUI - CAMPO COM FOCO AUTOMÁTICO",
-            key=f"scan_input_{st.session_state.input_key}",
-            label_visibility="collapsed"
-        )
-
-    # Processamento automático quando detecta 13 dígitos
-    if scan_input and len(scan_input.strip()) == 13:
-        ean_numero = scan_input.strip()
-        registrar_scan(ean_numero)
-        # Incrementa a key para forçar novo campo limpo
-        st.session_state.input_key += 1
-        # Força o rerun para limpar o campo
-        st.rerun()
-
-    # Instruções
-    st.info("""
-    **INSTRUÇÕES:**
-    - O campo acima **JÁ ESTÁ COM FOCO AUTOMÁTICO**
-    - Aponte o leitor e escaneie - não precisa clicar
-    - Quando ler 13 dígitos, processa automaticamente
-    - O campo é limpo e pronto para a próxima leitura
-    - **MESMO CÓDIGO PODE SER LID VÁRIAS VEZES**
-    """)
-
-    # Sidebar
+    # Sidebar - PRIMEIRO PASSO: Definir a loja
     with st.sidebar:
         st.title("Contagem por SKU")
         
         st.divider()
         
-        operador = st.text_input(
-            "🏪 Loja/Operador:",
-            placeholder="Digite o nome da loja/operador",
-            key="operador_input"
+        # Campo para nome da loja - SEMPRE O PRIMEIRO
+        if not st.session_state.loja_confirmada:
+            st.subheader("🏪 1º - Identifique a Loja")
+            nome_loja = st.text_input(
+                "Digite o nome da loja/operador:",
+                placeholder="Ex: Loja Centro, Loja Shopping, João Operador",
+                key="loja_input"
+            )
+            
+            if nome_loja.strip():
+                if st.button("✅ CONFIRMAR LOJA", use_container_width=True, type="primary"):
+                    st.session_state.loja_confirmada = True
+                    st.session_state.nome_loja = nome_loja.strip()
+                    st.session_state.input_key += 1
+                    st.rerun()
+            else:
+                st.warning("⚠️ Digite o nome da loja/operador para continuar")
+        else:
+            # Loja já confirmada - mostrar info travada
+            st.subheader("🏪 Loja Confirmada")
+            st.info(f"**{st.session_state.nome_loja}**")
+            st.success("✅ Loja confirmada - Pronto para escanear!")
+            
+            # Botão para alterar loja (só com nova contagem)
+            if st.button("🔄 Alterar Loja (Nova Contagem)", use_container_width=True, type="secondary"):
+                st.session_state.scans = []
+                st.session_state.loja_confirmada = False
+                st.session_state.nome_loja = ""
+                st.session_state.last_scan = ""
+                st.session_state.input_key += 1
+                st.rerun()
+        
+        st.divider()
+        
+        # Contador e informações da contagem atual
+        if st.session_state.loja_confirmada:
+            st.metric("📋 Scans Registrados", len(st.session_state.scans))
+            
+            st.divider()
+            
+            st.info("🟢 **Modo Leitor Ativo**")
+            st.caption("Loja confirmada - Campo EAN liberado")
+            st.caption("✅ Aceita múltiplas leituras do mesmo código")
+            
+            # Botão de nova contagem (mantém a loja)
+            if st.button("🔄 Nova Contagem", use_container_width=True, type="secondary"):
+                st.session_state.scans = []
+                st.session_state.last_scan = ""
+                st.session_state.input_key += 1
+                st.rerun()
+            
+            st.divider()
+            
+            # Botão finalizar (só aparece se tiver scans)
+            if st.session_state.scans:
+                if st.button("✅ FINALIZAR CONTAGEM", use_container_width=True, type="primary"):
+                    finalizar_contagem(st.session_state.nome_loja)
+
+    # Área principal - SÓ APARECE SE LOJA ESTIVER CONFIRMADA
+    if not st.session_state.loja_confirmada:
+        st.warning("👆 **PRIMEIRO PASSO: Identifique a loja/operador na sidebar**")
+        st.info("""
+        **FLUXO DO SISTEMA:**
+        1. **Digite o nome da loja/operador** na sidebar
+        2. **Clique em CONFIRMAR LOJA**
+        3. **Campo de leitura EAN será liberado**
+        4. **Comece a escanear os produtos**
+        """)
+        return
+
+    # SE LOJA CONFIRMADA: Mostrar área de leitura EAN
+    st.header("📝 2º - Leitura de Código de Barras (EAN)")
+    
+    # Container para o campo de leitura EAN
+    scan_container = st.container()
+    
+    with scan_container:
+        # Campo de leitura EAN - SÓ APARECE SE LOJA CONFIRMADA
+        st.markdown("**Digite o código de barras (EAN) ou use leitor:**")
+        
+        # HTML personalizado com ID FIXO para o campo EAN
+        st.markdown("""
+        <div style="margin-bottom: 20px;">
+            <input 
+                type="text" 
+                id="ean_scan_field" 
+                placeholder="⬅️ POSICIONE O LEITOR AQUI - CAMPO PRONTO PARA ESCANEAMENTO" 
+                style="width: 100%; padding: 12px; font-size: 16px; border: 3px solid #4CAF50; border-radius: 5px; background-color: #f0fff0;"
+                autocomplete="off"
+            />
+        </div>
+        
+        <script>
+            // Foco automático no campo EAN
+            function focusEanField() {
+                const eanField = document.getElementById('ean_scan_field');
+                if (eanField) {
+                    eanField.focus();
+                    eanField.select();
+                }
+            }
+            
+            // Focar imediatamente e manter foco
+            focusEanField();
+            setTimeout(focusEanField, 100);
+            setTimeout(focusEanField, 500);
+            setInterval(focusEanField, 1000);
+            
+            // Focar quando houver qualquer interação
+            document.addEventListener('click', focusEanField);
+            document.addEventListener('keydown', focusEanField);
+            
+            // Capturar Enter e processar automaticamente
+            document.getElementById('ean_scan_field').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    const value = this.value.trim();
+                    if (value.length === 13) {
+                        // Enviar para Streamlit
+                        window.location.href = `?ean=${value}&t=${new Date().getTime()}`;
+                        this.value = '';
+                        setTimeout(focusEanField, 100);
+                    }
+                }
+            });
+        </script>
+        """, unsafe_allow_html=True)
+    
+    # Também manter um campo Streamlit como fallback
+    with st.container():
+        scan_input_fallback = st.text_input(
+            "Campo alternativo (se necessário):",
+            placeholder="Use este campo se o superior não funcionar",
+            key=f"fallback_input_{st.session_state.input_key}",
+            label_visibility="collapsed"
         )
         
-        st.metric("📋 Scans Registrados", len(st.session_state.scans))
-        
-        st.divider()
-        
-        st.info("🟢 **Modo Leitor Ativo**")
-        st.caption("Foco automático ativo")
-        
-        if st.button("🔄 Nova Contagem", use_container_width=True, type="secondary"):
-            st.session_state.scans = []
-            st.session_state.last_scan = ""
+        # Processar o campo fallback
+        if scan_input_fallback and len(scan_input_fallback.strip()) == 13:
+            registrar_scan(scan_input_fallback.strip())
             st.session_state.input_key += 1
             st.rerun()
-        
-        st.divider()
-        
-        if st.session_state.scans:
-            if st.button("✅ FINALIZAR CONTAGEM", use_container_width=True, type="primary"):
-                if operador:
-                    finalizar_contagem(operador)
-                else:
-                    st.warning("⚠️ Digite o nome da loja/operador")
+    
+    # Processar EAN da URL (enviado pelo JavaScript)
+    query_params = st.experimental_get_query_params()
+    if 'ean' in query_params:
+        ean_value = query_params['ean'][0]
+        if len(ean_value) == 13:
+            registrar_scan(ean_value)
+            # Limpar parâmetro da URL
+            st.experimental_set_query_params()
+            st.rerun()
 
-    # Lista de scans
+    # Instruções específicas para quando a loja está confirmada
+    st.info("""
+    **INSTRUÇÕES DE ESCANEAMENTO:**
+    - **Loja:** {} - ✅ CONFIRMADA
+    - **Campo EAN:** Já está com foco automático
+    - **Aponte o leitor** e escaneie os produtos
+    - **Cada beep** = 1 produto registrado
+    - **Mesmo código** pode ser escaneado várias vezes
+    - **Campo limpa automaticamente** após cada leitura
+    """.format(st.session_state.nome_loja))
+
+    # Lista de scans registrados - SÓ SE HOUVER SCANS
     if st.session_state.scans:
-        st.header("📋 Scans Registrados")
+        st.header("📋 Produtos Escaneados (Resumo)")
         
+        # Criar DataFrame para o sumário
         df_scans = pd.DataFrame(st.session_state.scans)
+        
+        # Agrupar e somar as quantidades
         df_sumario = df_scans.groupby(['sku', 'descricao']).size().reset_index(name='Quantidade')
         df_sumario.columns = ['SKU', 'Descrição', 'Quantidade']
         df_sumario = df_sumario.sort_values('Quantidade', ascending=False)
         
         st.dataframe(df_sumario, use_container_width=True, hide_index=True)
         
+        # Estatísticas rápidas
         col1, col2, col3 = st.columns(3)
         with col1:
             st.metric("Total de Scans", len(st.session_state.scans))
@@ -451,9 +495,6 @@ def main():
         with col3:
             total_unidades = df_sumario['Quantidade'].sum() if len(df_sumario) > 0 else 0
             st.metric("Total de Unidades", total_unidades)
-            
-        if not operador:
-            st.warning("👆 **Digite o nome da loja/operador na sidebar para finalizar**")
 
 if __name__ == "__main__":
     main()
