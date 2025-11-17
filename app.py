@@ -304,30 +304,6 @@ def main():
     # Área principal - Formulário de leitura
     st.header("📝 Leitura de Código de Barras (EAN)")
     
-    # JavaScript para auto foco - Versão melhorada
-    st.markdown("""
-    <script>
-        function focusScanInput() {
-            const inputs = parent.document.querySelectorAll('input[type=text]');
-            for (let input of inputs) {
-                if (input.value === "" || input.placeholder.includes("POSICIONE O LEITOR")) {
-                    input.focus();
-                    input.select();
-                    break;
-                }
-            }
-        }
-        
-        // Tenta focar imediatamente e depois de um delay
-        setTimeout(focusScanInput, 100);
-        setTimeout(focusScanInput, 500);
-        setTimeout(focusScanInput, 1000);
-        
-        // Também foca quando o mouse passa sobre a área
-        document.addEventListener('mousemove', focusScanInput);
-    </script>
-    """, unsafe_allow_html=True)
-    
     # Container para o campo de leitura
     scan_container = st.container()
     
@@ -339,6 +315,65 @@ def main():
             key=f"scan_input_{st.session_state.input_key}",
             label_visibility="visible"
         )
+
+    # JavaScript para auto foco - Versão MELHORADA com ID fixo
+    st.markdown("""
+    <script>
+        // Função para encontrar e focar no campo de scan
+        function focusScanInput() {
+            // Procura por inputs do Streamlit
+            const inputs = window.parent.document.querySelectorAll('input[type="text"]');
+            let targetInput = null;
+            
+            // Tenta encontrar o input pelo placeholder
+            for (let input of inputs) {
+                if (input.placeholder && input.placeholder.includes("POSICIONE O LEITOR")) {
+                    targetInput = input;
+                    break;
+                }
+            }
+            
+            // Se não encontrou pelo placeholder, pega o primeiro input vazio
+            if (!targetInput) {
+                for (let input of inputs) {
+                    if (input.value === "") {
+                        targetInput = input;
+                        break;
+                    }
+                }
+            }
+            
+            // Se encontrou um input, foca nele
+            if (targetInput) {
+                // Define um ID fixo para facilitar futuras buscas
+                targetInput.id = "ean_scan_input_fixed";
+                targetInput.focus();
+                targetInput.select();
+                console.log("Campo de scan focado com sucesso!");
+                return true;
+            }
+            return false;
+        }
+        
+        // Tenta focar múltiplas vezes para garantir
+        setTimeout(focusScanInput, 100);
+        setTimeout(focusScanInput, 500);
+        setTimeout(focusScanInput, 1000);
+        setTimeout(focusScanInput, 2000);
+        
+        // Foca quando a página ganha foco
+        window.parent.addEventListener('focus', focusScanInput);
+        
+        // Foca quando clicar em qualquer lugar da página
+        window.parent.document.addEventListener('click', function() {
+            setTimeout(focusScanInput, 100);
+        });
+        
+        // Foca periodicamente a cada 3 segundos (como fallback)
+        setInterval(focusScanInput, 3000);
+        
+    </script>
+    """, unsafe_allow_html=True)
 
     # Verifica se há um novo scan para registrar (modo automático)
     # REMOVIDA A VERIFICAÇÃO DE "scan_input != st.session_state.last_scan" 
