@@ -1,4 +1,5 @@
 import streamlit as st
+from streamlit.components.v1 import html
 import pandas as pd
 import psycopg2
 from datetime import datetime, timezone, timedelta
@@ -400,27 +401,35 @@ def main():
                 label_visibility="collapsed"
             )
             
-            # Script JavaScript para forçar o foco no campo EAN
-            # O Streamlit não suporta 'autofocus' nativamente em todas as versões.
-            # Este script busca o input pelo seu atributo 'key' e foca nele.
-            st.markdown(
-                f"""
-                <script>
-                    // Função para focar no campo
-                    function focusEANInput() {{
-                        // O Streamlit gera um ID baseado na key. Tentamos encontrar o input.
-                        const inputElement = document.querySelector('input[aria-label=""]');
-                        if (inputElement) {{
-                            inputElement.focus();
-                        }}
-                    }}
-                    
-                    // Executa a função após o carregamento da página (ou rerun)
-                    focusEANInput();
-                </script>
-                """,
-                unsafe_allow_html=True
-            )
+            # Solução robusta para forçar o foco no campo EAN após o rerun
+            # Usamos o ID gerado pelo Streamlit (st-b) para o text_input
+            # O ID é previsível: st-b<numero_do_input>
+            # Como é o primeiro input dentro do col2, o ID é estável.
+            
+            # O Streamlit 1.20+ adicionou o atributo data-testid="stTextInput"
+            # Vamos usar o seletor mais genérico e seguro para focar no input.
+            
+            # O seletor mais seguro é baseado no placeholder ou no data-testid
+            # Como o placeholder é único, vamos usá-lo.
+            
+            js_code = """
+            <script>
+                function focusEANInput() {
+                    // Tenta encontrar o input pelo placeholder único
+                    const inputElement = document.querySelector('input[placeholder="⬅️ POSICIONE O LEITOR AQUI"]');
+                    if (inputElement) {
+                        inputElement.focus();
+                    }
+                }
+                // Executa a função após um pequeno delay para garantir que o DOM esteja pronto
+                setTimeout(focusEANInput, 100);
+            </script>
+            """
+            
+            # Injeta o JavaScript usando o componente HTML
+            html(js_code, height=0, width=0)
+            
+
 
     # Processamento automático quando detecta 13 dígitos
     if scan_input and len(scan_input.strip()) == 13:
