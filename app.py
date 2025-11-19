@@ -1,5 +1,4 @@
 import streamlit as st
-
 import pandas as pd
 import psycopg2
 from datetime import datetime, timezone, timedelta
@@ -35,6 +34,8 @@ if 'loja_confirmada' not in st.session_state:
     st.session_state.loja_confirmada = False
 if 'nome_loja' not in st.session_state:
     st.session_state.nome_loja = ""
+if 'auto_focus' not in st.session_state:
+    st.session_state.auto_focus = True
 
 def conectar_banco():
     """Conecta ao banco Neon"""
@@ -324,6 +325,7 @@ def main():
                     st.session_state.loja_confirmada = True
                     st.session_state.nome_loja = nome_loja.strip()
                     st.session_state.input_key += 1
+                    st.session_state.auto_focus = True
                     st.rerun()
             else:
                 st.warning("⚠️ Digite o nome da loja/operador para continuar")
@@ -340,6 +342,7 @@ def main():
                 st.session_state.nome_loja = ""
                 st.session_state.last_scan = ""
                 st.session_state.input_key += 1
+                st.session_state.auto_focus = False
                 st.rerun()
         
         st.divider()
@@ -359,6 +362,7 @@ def main():
                 st.session_state.scans = []
                 st.session_state.last_scan = ""
                 st.session_state.input_key += 1
+                st.session_state.auto_focus = True
                 st.rerun()
             
             st.divider()
@@ -387,25 +391,50 @@ def main():
     scan_container = st.container()
     
     with scan_container:
-        # ÚNICO campo de leitura EAN - SEM JavaScript
+        # ÚNICO campo de leitura EAN - COM JavaScript para auto-foco
         st.markdown("**Digite o código de barras (EAN) ou use leitor:**")
+        
+        # Adicionar JavaScript para auto-foco
+        if st.session_state.auto_focus:
+            st.markdown("""
+            <script>
+            function focusEANInput() {
+                // Aguarda um pouco para garantir que o Streamlit renderizou
+                setTimeout(function() {
+                    // Procura o input pelo placeholder
+                    const inputs = document.querySelectorAll('input[placeholder*="POSICIONE O LEITOR"]');
+                    if (inputs.length > 0) {
+                        inputs[0].focus();
+                        inputs[0].select();
+                    }
+                }, 100);
+            }
+            // Executa quando a página carrega
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', focusEANInput);
+            } else {
+                focusEANInput();
+            }
+            </script>
+            """, unsafe_allow_html=True)
         
         # Usando columns para centralizar e destacar o campo
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
             scan_input = st.text_input(
-                "",
+                "Campo de Leitura EAN:",
                 placeholder="⬅️ POSICIONE O LEITOR AQUI",
                 key=f"ean_input_{st.session_state.input_key}",
-
-                label_visibility="collapsed"
+                label_visibility="collapsed",
+                autocomplete="off"
             )
-            
-
-            
-
-            
-
+        
+        # Botão manual para focar (backup)
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col2:
+            if st.button("🎯 CLIQUE AQUI PARA FOCAR NO CAMPO", use_container_width=True, type="secondary"):
+                st.session_state.auto_focus = True
+                st.rerun()
 
     # Processamento automático quando detecta 13 dígitos
     if scan_input and len(scan_input.strip()) == 13:
@@ -413,6 +442,7 @@ def main():
         registrar_scan(ean_numero)
         # Incrementa a key para forçar novo campo limpo
         st.session_state.input_key += 1
+        st.session_state.auto_focus = True
         # Força o rerun para limpar o campo
         st.rerun()
 
@@ -421,6 +451,7 @@ def main():
     **INSTRUÇÕES DE ESCANEAMENTO:**
     - **Loja:** {st.session_state.nome_loja} - ✅ CONFIRMADA
     - **Clique no campo acima** ou use **TAB** para focar
+    - **Use o botão "CLIQUE AQUI PARA FOCAR"** se necessário
     - **Aponte o leitor** e escaneie os produtos
     - **Cada beep** = 1 produto registrado
     - **Mesmo código** pode ser escaneado várias vezes
