@@ -396,6 +396,7 @@ def main():
                 "",
                 placeholder="⬅️ POSICIONE O LEITOR AQUI",
                 key=f"ean_input_{st.session_state.input_key}",
+                autofocus=True,
                 label_visibility="collapsed"
             )
 
