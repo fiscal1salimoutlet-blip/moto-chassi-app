@@ -382,41 +382,19 @@ def main():
     # SE LOJA CONFIRMADA: Mostrar área de leitura EAN
     st.header("📝 2º - Leitura de Código de Barras (EAN)")
     
-    # Container destacado para o campo de leitura
-    with st.container():
-        st.markdown("""
-        <div style='
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            padding: 20px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            border: 3px solid #FFD700;
-        '>
-            <h3 style='color: white; text-align: center; margin: 0;'>📍 CAMPO PRINCIPAL DE LEITURA</h3>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # Campo de input principal
-        col1, col2, col3 = st.columns([1, 2, 1])
-        with col2:
-            st.markdown("<div style='height: 10px'></div>", unsafe_allow_html=True)
-            scan_input = st.text_input(
-                "Campo de Leitura EAN:",
-                placeholder="🎯 CLIQUE AQUI E POSICIONE O LEITOR",
-                key=f"ean_input_{st.session_state.input_key}",
-                label_visibility="collapsed",
-                autocomplete="off"
-            )
-            st.markdown("<div style='height: 10px'></div>", unsafe_allow_html=True)
-            
-            # Botão para ajudar no foco (apenas visual)
-            if st.button("🎯 CLIQUE AQUI PRIMEIRO → DEPOIS ESCANEIE", 
-                        use_container_width=True, 
-                        type="primary",
-                        help="Clique aqui para garantir que o campo está pronto para receber o leitor"):
-                # Este botão não faz nada funcional, apenas ajuda o usuário a focar
-                st.session_state.input_key += 1
-                st.rerun()
+    # Campo simples e direto
+    st.markdown("**Digite o código de barras (EAN) ou use leitor:**")
+    
+    # Campo centralizado
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        scan_input = st.text_input(
+            "Campo de Leitura EAN:",
+            placeholder="⬅️ CLIQUE AQUI E POSICIONE O LEITOR",
+            key=f"ean_input_{st.session_state.input_key}",
+            label_visibility="collapsed",
+            autocomplete="off"
+        )
 
     # Processamento automático quando detecta 13 dígitos
     if scan_input and len(scan_input.strip()) == 13:
@@ -427,15 +405,13 @@ def main():
         # Força o rerun para limpar o campo
         st.rerun()
 
-    # Instruções específicas para quando a loja está confirmada
+    # Instruções mínimas e diretas
     st.info(f"""
-    **INSTRUÇÕES DE ESCANEAMENTO - LOJA: {st.session_state.nome_loja}**
+    **INSTRUÇÕES PARA {st.session_state.nome_loja}:**
     
-    🔹 **PASSO 1:** Clique no campo azul acima ou no botão "CLIQUE AQUI PRIMEIRO"
-    🔹 **PASSO 2:** Aponte o leitor de código de barras para o campo
-    🔹 **PASSO 3:** Escaneie os produtos - cada beep = 1 registro
-    🔹 **PASSO 4:** Continue escaneando - mesmo código pode ser lido várias vezes
-    🔹 **DICA:** Use a tecla **TAB** para navegar rapidamente para o campo
+    1. **CLIQUE no campo acima**
+    2. **POSICIONE o leitor** 
+    3. **ESCANEIE** os produtos
     
     ⚡ **O campo limpa automaticamente após cada leitura!**
     """)
