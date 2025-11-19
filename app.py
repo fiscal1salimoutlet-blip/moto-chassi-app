@@ -401,21 +401,7 @@ def main():
                 label_visibility="collapsed"
             )
             
-            # Solução JavaScript simplificada (Última tentativa)
-            # Foca no primeiro input de texto com o placeholder específico
-            st.markdown(
-                """
-                <script>
-                    const input = document.querySelector('input[placeholder="⬅️ POSICIONE O LEITOR AQUI"]');
-                    if (input) {
-                        setTimeout(() => {
-                            input.focus();
-                        }, 100);
-                    }
-                </script>
-                """,
-                unsafe_allow_html=True
-            )
+
             
 
             
