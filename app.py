@@ -386,12 +386,73 @@ def main():
     scan_container = st.container()
     
     with scan_container:
-        # ÚNICO campo de leitura EAN - COM FOCUS NATIVO DO STREAMLIT
+        # ÚNICO campo de leitura EAN
         st.markdown("**Digite o código de barras (EAN) ou use leitor:**")
         
         # Usando columns para centralizar e destacar o campo
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
+            # Adicionar JavaScript para auto-foco ANTES do campo
+            st.markdown("""
+            <script>
+            // Função para focar no campo EAN
+            function focusEANField() {
+                // Aguarda o Streamlit renderizar
+                setTimeout(() => {
+                    const inputs = document.getElementsByTagName('input');
+                    for (let input of inputs) {
+                        // Verifica se é um campo de texto com o placeholder correto
+                        if (input.type === 'text' && input.placeholder && 
+                            input.placeholder.includes('POSICIONE O LEITOR')) {
+                            input.focus();
+                            input.select();
+                            console.log('Campo EAN focado com sucesso!');
+                            return;
+                        }
+                    }
+                    console.log('Campo EAN não encontrado na primeira tentativa, tentando novamente...');
+                    
+                    // Segunda tentativa após mais tempo
+                    setTimeout(() => {
+                        const inputs = document.getElementsByTagName('input');
+                        for (let input of inputs) {
+                            if (input.type === 'text' && input.placeholder && 
+                                input.placeholder.includes('POSICIONE O LEITOR')) {
+                                input.focus();
+                                input.select();
+                                console.log('Campo EAN focado na segunda tentativa!');
+                                return;
+                            }
+                        }
+                        console.log('Campo EAN não encontrado');
+                    }, 500);
+                }, 300);
+            }
+            
+            // Executar quando a página carregar
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', focusEANField);
+            } else {
+                focusEANField();
+            }
+            
+            // Executar após cada atualização do Streamlit
+            const observer = new MutationObserver((mutations) => {
+                let shouldFocus = false;
+                mutations.forEach((mutation) => {
+                    if (mutation.addedNodes.length > 0) {
+                        shouldFocus = true;
+                    }
+                });
+                if (shouldFocus) {
+                    focusEANField();
+                }
+            });
+            
+            observer.observe(document.body, { childList: true, subtree: true });
+            </script>
+            """, unsafe_allow_html=True)
+            
             scan_input = st.text_input(
                 "Campo de Leitura EAN:",
                 placeholder="⬅️ POSICIONE O LEITOR AQUI",
@@ -399,30 +460,6 @@ def main():
                 label_visibility="collapsed",
                 autocomplete="off"
             )
-            
-            # Foco automático usando st.focus() - funciona na versão mais recente do Streamlit
-            if st.session_state.loja_confirmada:
-                try:
-                    # Tenta focar no campo usando a funcionalidade nativa do Streamlit
-                    st.components.v1.html(
-                        f"""
-                        <script>
-                            setTimeout(function() {{
-                                var inputs = document.querySelectorAll('input[type="text"]');
-                                for (var i = 0; i < inputs.length; i++) {{
-                                    if (inputs[i].placeholder && inputs[i].placeholder.includes('POSICIONE O LEITOR')) {{
-                                        inputs[i].focus();
-                                        inputs[i].select();
-                                        break;
-                                    }}
-                                }}
-                            }}, 100);
-                        </script>
-                        """,
-                        height=0
-                    )
-                except:
-                    pass
 
     # Processamento automático quando detecta 13 dígitos
     if scan_input and len(scan_input.strip()) == 13:
@@ -437,12 +474,11 @@ def main():
     st.info(f"""
     **INSTRUÇÕES DE ESCANEAMENTO:**
     - **Loja:** {st.session_state.nome_loja} - ✅ CONFIRMADA
-    - **Campo já está focado** - pronto para escanear!
+    - **Clique no campo acima** ou use **TAB** para focar
     - **Aponte o leitor** e escaneie os produtos
     - **Cada beep** = 1 produto registrado
     - **Mesmo código** pode ser escaneado várias vezes
     - **Campo limpa automaticamente** após cada leitura
-    - **Use TAB** se precisar focar manualmente
     """)
 
     # Lista de scans registrados - SÓ SE HOUVER SCANS
