@@ -34,8 +34,6 @@ if 'loja_confirmada' not in st.session_state:
     st.session_state.loja_confirmada = False
 if 'nome_loja' not in st.session_state:
     st.session_state.nome_loja = ""
-if 'auto_focus' not in st.session_state:
-    st.session_state.auto_focus = True
 
 def conectar_banco():
     """Conecta ao banco Neon"""
@@ -325,7 +323,6 @@ def main():
                     st.session_state.loja_confirmada = True
                     st.session_state.nome_loja = nome_loja.strip()
                     st.session_state.input_key += 1
-                    st.session_state.auto_focus = True
                     st.rerun()
             else:
                 st.warning("⚠️ Digite o nome da loja/operador para continuar")
@@ -342,7 +339,6 @@ def main():
                 st.session_state.nome_loja = ""
                 st.session_state.last_scan = ""
                 st.session_state.input_key += 1
-                st.session_state.auto_focus = False
                 st.rerun()
         
         st.divider()
@@ -362,7 +358,6 @@ def main():
                 st.session_state.scans = []
                 st.session_state.last_scan = ""
                 st.session_state.input_key += 1
-                st.session_state.auto_focus = True
                 st.rerun()
             
             st.divider()
@@ -391,60 +386,8 @@ def main():
     scan_container = st.container()
     
     with scan_container:
-        # ÚNICO campo de leitura EAN - COM JavaScript para auto-foco
+        # ÚNICO campo de leitura EAN - COM FOCUS NATIVO DO STREAMLIT
         st.markdown("**Digite o código de barras (EAN) ou use leitor:**")
-        
-        # Adicionar JavaScript para auto-foco - VERSÃO CORRIGIDA
-        if st.session_state.auto_focus:
-            st.markdown("""
-            <script>
-            function focusEANInput() {
-                // Aguarda um pouco para garantir que o Streamlit renderizou
-                setTimeout(function() {
-                    // Procura pelo campo específico usando o aria-label único
-                    const targetInput = document.querySelector('input[aria-label="Campo de Leitura EAN:"]');
-                    if (targetInput) {
-                        targetInput.focus();
-                        targetInput.select();
-                        console.log('Campo EAN focado com sucesso!');
-                    } else {
-                        console.log('Campo EAN não encontrado, tentando novamente...');
-                        // Tenta novamente após mais um tempo se não encontrou
-                        setTimeout(function() {
-                            const retryInput = document.querySelector('input[aria-label="Campo de Leitura EAN:"]');
-                            if (retryInput) {
-                                retryInput.focus();
-                                retryInput.select();
-                                console.log('Campo EAN focado na segunda tentativa!');
-                            }
-                        }, 500);
-                    }
-                }, 400);
-            }
-            
-            // Executa quando a página carrega
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', focusEANInput);
-            } else {
-                focusEANInput();
-            }
-            
-            // Também executa após atualizações do Streamlit
-            const observer = new MutationObserver(function(mutations) {
-                let shouldRefocus = false;
-                mutations.forEach(function(mutation) {
-                    if (mutation.addedNodes.length > 0) {
-                        shouldRefocus = true;
-                    }
-                });
-                if (shouldRefocus) {
-                    focusEANInput();
-                }
-            });
-            
-            observer.observe(document.body, { childList: true, subtree: true });
-            </script>
-            """, unsafe_allow_html=True)
         
         # Usando columns para centralizar e destacar o campo
         col1, col2, col3 = st.columns([1, 2, 1])
@@ -456,6 +399,30 @@ def main():
                 label_visibility="collapsed",
                 autocomplete="off"
             )
+            
+            # Foco automático usando st.focus() - funciona na versão mais recente do Streamlit
+            if st.session_state.loja_confirmada:
+                try:
+                    # Tenta focar no campo usando a funcionalidade nativa do Streamlit
+                    st.components.v1.html(
+                        f"""
+                        <script>
+                            setTimeout(function() {{
+                                var inputs = document.querySelectorAll('input[type="text"]');
+                                for (var i = 0; i < inputs.length; i++) {{
+                                    if (inputs[i].placeholder && inputs[i].placeholder.includes('POSICIONE O LEITOR')) {{
+                                        inputs[i].focus();
+                                        inputs[i].select();
+                                        break;
+                                    }}
+                                }}
+                            }}, 100);
+                        </script>
+                        """,
+                        height=0
+                    )
+                except:
+                    pass
 
     # Processamento automático quando detecta 13 dígitos
     if scan_input and len(scan_input.strip()) == 13:
@@ -463,7 +430,6 @@ def main():
         registrar_scan(ean_numero)
         # Incrementa a key para forçar novo campo limpo
         st.session_state.input_key += 1
-        st.session_state.auto_focus = True
         # Força o rerun para limpar o campo
         st.rerun()
 
