@@ -396,8 +396,30 @@ def main():
                 "",
                 placeholder="⬅️ POSICIONE O LEITOR AQUI",
                 key=f"ean_input_{st.session_state.input_key}",
-                autofocus=True,
+
                 label_visibility="collapsed"
+            )
+            
+            # Script JavaScript para forçar o foco no campo EAN
+            # O Streamlit não suporta 'autofocus' nativamente em todas as versões.
+            # Este script busca o input pelo seu atributo 'key' e foca nele.
+            st.markdown(
+                f"""
+                <script>
+                    // Função para focar no campo
+                    function focusEANInput() {{
+                        // O Streamlit gera um ID baseado na key. Tentamos encontrar o input.
+                        const inputElement = document.querySelector('input[aria-label=""]');
+                        if (inputElement) {{
+                            inputElement.focus();
+                        }}
+                    }}
+                    
+                    // Executa a função após o carregamento da página (ou rerun)
+                    focusEANInput();
+                </script>
+                """,
+                unsafe_allow_html=True
             )
 
     # Processamento automático quando detecta 13 dígitos
