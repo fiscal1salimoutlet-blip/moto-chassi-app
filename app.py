@@ -401,20 +401,31 @@ def main():
             function focusEANInput() {
                 // Aguarda um pouco para garantir que o Streamlit renderizou
                 setTimeout(function() {
-                    // Procura o input pelo placeholder
-                    const inputs = document.querySelectorAll('input[placeholder*="POSICIONE O LEITOR"]');
-                    if (inputs.length > 0) {
-                        inputs[0].focus();
-                        inputs[0].select();
+                    // Procura inputs do Streamlit e foca no primeiro que encontrar
+                    const inputs = document.querySelectorAll('input[type="text"]');
+                    for (let input of inputs) {
+                        // Verifica se é o campo que queremos focar (pode ajustar essa lógica)
+                        if (input.placeholder && input.placeholder.includes('POSICIONE O LEITOR')) {
+                            input.focus();
+                            input.select();
+                            break;
+                        }
                     }
-                }, 100);
+                }, 300);
             }
-            // Executa quando a página carrega
+            // Executa quando a página carrega e após cada atualização
             if (document.readyState === 'loading') {
                 document.addEventListener('DOMContentLoaded', focusEANInput);
             } else {
                 focusEANInput();
             }
+            
+            // Também executa após atualizações do Streamlit
+            const observer = new MutationObserver(function(mutations) {
+                focusEANInput();
+            });
+            
+            observer.observe(document.body, { childList: true, subtree: true });
             </script>
             """, unsafe_allow_html=True)
         
@@ -428,13 +439,6 @@ def main():
                 label_visibility="collapsed",
                 autocomplete="off"
             )
-        
-        # Botão manual para focar (backup)
-        col1, col2, col3 = st.columns([1, 2, 1])
-        with col2:
-            if st.button("🎯 CLIQUE AQUI PARA FOCAR NO CAMPO", use_container_width=True, type="secondary"):
-                st.session_state.auto_focus = True
-                st.rerun()
 
     # Processamento automático quando detecta 13 dígitos
     if scan_input and len(scan_input.strip()) == 13:
@@ -450,12 +454,12 @@ def main():
     st.info(f"""
     **INSTRUÇÕES DE ESCANEAMENTO:**
     - **Loja:** {st.session_state.nome_loja} - ✅ CONFIRMADA
-    - **Clique no campo acima** ou use **TAB** para focar
-    - **Use o botão "CLIQUE AQUI PARA FOCAR"** se necessário
+    - **Campo já está focado** - pronto para escanear!
     - **Aponte o leitor** e escaneie os produtos
     - **Cada beep** = 1 produto registrado
     - **Mesmo código** pode ser escaneado várias vezes
     - **Campo limpa automaticamente** após cada leitura
+    - **Use TAB** se precisar focar manualmente
     """)
 
     # Lista de scans registrados - SÓ SE HOUVER SCANS
