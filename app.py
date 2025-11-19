@@ -34,8 +34,6 @@ if 'loja_confirmada' not in st.session_state:
     st.session_state.loja_confirmada = False
 if 'nome_loja' not in st.session_state:
     st.session_state.nome_loja = ""
-if 'primeiro_acesso' not in st.session_state:
-    st.session_state.primeiro_acesso = True
 
 def conectar_banco():
     """Conecta ao banco Neon"""
@@ -325,7 +323,6 @@ def main():
                     st.session_state.loja_confirmada = True
                     st.session_state.nome_loja = nome_loja.strip()
                     st.session_state.input_key += 1
-                    st.session_state.primeiro_acesso = True
                     st.rerun()
             else:
                 st.warning("⚠️ Digite o nome da loja/operador para continuar")
@@ -385,44 +382,42 @@ def main():
     # SE LOJA CONFIRMADA: Mostrar área de leitura EAN
     st.header("📝 2º - Leitura de Código de Barras (EAN)")
     
-    # TRUQUE: Se for o primeiro acesso após confirmar loja, força um refresh
-    if st.session_state.primeiro_acesso:
-        st.session_state.primeiro_acesso = False
-        st.rerun()
-    
-    # Campo simples e direto - SEM JavaScript, SEM botões extras
-    st.markdown("**Digite o código de barras (EAN) ou use leitor:**")
-    
-    # Campo centralizado
-    col1, col2, col3 = st.columns([1, 2, 1])
-    with col2:
-        scan_input = st.text_input(
-            "Campo de Leitura EAN:",
-            placeholder="⬅️ CLIQUE AQUI E POSICIONE O LEITOR",
-            key=f"ean_input_{st.session_state.input_key}",
-            label_visibility="collapsed",
-            autocomplete="off"
-        )
+    # Container com borda destacada
+    with st.container():
+        st.markdown("**Digite o código de barras (EAN) ou use leitor:**")
+        
+        # Campo SEMPRE recriado com key única
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col2:
+            scan_input = st.text_input(
+                "Campo de Leitura EAN:",
+                placeholder="⬅️ CLIQUE AQUI E POSICIONE O LEITOR",
+                key=f"ean_input_{st.session_state.input_key}",
+                label_visibility="collapsed",
+                autocomplete="off"
+            )
 
-    # Processamento automático quando detecta 13 dígitos
+    # Processamento IMEDIATO quando detecta 13 dígitos
     if scan_input and len(scan_input.strip()) == 13:
         ean_numero = scan_input.strip()
         registrar_scan(ean_numero)
         # Incrementa a key para forçar novo campo limpo
         st.session_state.input_key += 1
-        # Força o rerun para limpar o campo
+        # Rerun IMEDIATO para recriar o campo limpo
         st.rerun()
 
     # Instruções mínimas
-    st.info(f"""
-    **INSTRUÇÕES PARA {st.session_state.nome_loja}:**
-    
-    **1. CLIQUE no campo acima**
-    **2. ESCANEIE os produtos**
-    **3. CONTINUE escaneando**
-    
-    ⚡ **O campo limpa automaticamente após cada leitura!**
-    """)
+    if st.session_state.loja_confirmada:
+        st.info(f"""
+        **PRONTO PARA ESCANEAR - {st.session_state.nome_loja}**
+        
+        **1. Clique no campo acima UMA VEZ**
+        **2. Posicione o leitor de código de barras**
+        **3. Escaneie os produtos**
+        
+        ⚡ **Cada scan limpa automaticamente o campo**
+        🔄 **Mesmo código pode ser escaneado várias vezes**
+        """)
 
     # Lista de scans registrados - SÓ SE HOUVER SCANS
     if st.session_state.scans:
