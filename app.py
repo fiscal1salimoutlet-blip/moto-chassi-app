@@ -394,26 +394,35 @@ def main():
         # ÚNICO campo de leitura EAN - COM JavaScript para auto-foco
         st.markdown("**Digite o código de barras (EAN) ou use leitor:**")
         
-        # Adicionar JavaScript para auto-foco
+        # Adicionar JavaScript para auto-foco - VERSÃO CORRIGIDA
         if st.session_state.auto_focus:
             st.markdown("""
             <script>
             function focusEANInput() {
                 // Aguarda um pouco para garantir que o Streamlit renderizou
                 setTimeout(function() {
-                    // Procura inputs do Streamlit e foca no primeiro que encontrar
-                    const inputs = document.querySelectorAll('input[type="text"]');
-                    for (let input of inputs) {
-                        // Verifica se é o campo que queremos focar (pode ajustar essa lógica)
-                        if (input.placeholder && input.placeholder.includes('POSICIONE O LEITOR')) {
-                            input.focus();
-                            input.select();
-                            break;
-                        }
+                    // Procura pelo campo específico usando o aria-label único
+                    const targetInput = document.querySelector('input[aria-label="Campo de Leitura EAN:"]');
+                    if (targetInput) {
+                        targetInput.focus();
+                        targetInput.select();
+                        console.log('Campo EAN focado com sucesso!');
+                    } else {
+                        console.log('Campo EAN não encontrado, tentando novamente...');
+                        // Tenta novamente após mais um tempo se não encontrou
+                        setTimeout(function() {
+                            const retryInput = document.querySelector('input[aria-label="Campo de Leitura EAN:"]');
+                            if (retryInput) {
+                                retryInput.focus();
+                                retryInput.select();
+                                console.log('Campo EAN focado na segunda tentativa!');
+                            }
+                        }, 500);
                     }
-                }, 300);
+                }, 400);
             }
-            // Executa quando a página carrega e após cada atualização
+            
+            // Executa quando a página carrega
             if (document.readyState === 'loading') {
                 document.addEventListener('DOMContentLoaded', focusEANInput);
             } else {
@@ -422,7 +431,15 @@ def main():
             
             // Também executa após atualizações do Streamlit
             const observer = new MutationObserver(function(mutations) {
-                focusEANInput();
+                let shouldRefocus = false;
+                mutations.forEach(function(mutation) {
+                    if (mutation.addedNodes.length > 0) {
+                        shouldRefocus = true;
+                    }
+                });
+                if (shouldRefocus) {
+                    focusEANInput();
+                }
             });
             
             observer.observe(document.body, { childList: true, subtree: true });
