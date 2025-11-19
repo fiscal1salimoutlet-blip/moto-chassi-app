@@ -1,5 +1,5 @@
 import streamlit as st
-from streamlit.components.v1 import html
+
 import pandas as pd
 import psycopg2
 from datetime import datetime, timezone, timedelta
@@ -401,33 +401,23 @@ def main():
                 label_visibility="collapsed"
             )
             
-            # Solução robusta para forçar o foco no campo EAN após o rerun
-            # Usamos o ID gerado pelo Streamlit (st-b) para o text_input
-            # O ID é previsível: st-b<numero_do_input>
-            # Como é o primeiro input dentro do col2, o ID é estável.
-            
-            # O Streamlit 1.20+ adicionou o atributo data-testid="stTextInput"
-            # Vamos usar o seletor mais genérico e seguro para focar no input.
-            
-            # O seletor mais seguro é baseado no placeholder ou no data-testid
-            # Como o placeholder é único, vamos usá-lo.
-            
-            js_code = """
-            <script>
-                function focusEANInput() {
-                    // Tenta encontrar o input pelo placeholder único
-                    const inputElement = document.querySelector('input[placeholder="⬅️ POSICIONE O LEITOR AQUI"]');
-                    if (inputElement) {
-                        inputElement.focus();
+            # Solução JavaScript simplificada (Última tentativa)
+            # Foca no primeiro input de texto com o placeholder específico
+            st.markdown(
+                """
+                <script>
+                    const input = document.querySelector('input[placeholder="⬅️ POSICIONE O LEITOR AQUI"]');
+                    if (input) {
+                        setTimeout(() => {
+                            input.focus();
+                        }, 100);
                     }
-                }
-                // Executa a função após um pequeno delay para garantir que o DOM esteja pronto
-                setTimeout(focusEANInput, 100);
-            </script>
-            """
+                </script>
+                """,
+                unsafe_allow_html=True
+            )
             
-            # Injeta o JavaScript usando o componente HTML
-            html(js_code, height=0, width=0)
+
             
 
 
