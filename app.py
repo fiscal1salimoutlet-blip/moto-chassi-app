@@ -26,10 +26,6 @@ fuso_brasilia = timezone(timedelta(hours=-3))
 # Inicializar sessão
 if 'scans' not in st.session_state:
     st.session_state.scans = []
-if 'last_scan' not in st.session_state:
-    st.session_state.last_scan = ""
-if 'input_key' not in st.session_state:
-    st.session_state.input_key = 0
 if 'loja_confirmada' not in st.session_state:
     st.session_state.loja_confirmada = False
 if 'nome_loja' not in st.session_state:
@@ -322,7 +318,6 @@ def main():
                 if st.button("✅ CONFIRMAR LOJA", use_container_width=True, type="primary"):
                     st.session_state.loja_confirmada = True
                     st.session_state.nome_loja = nome_loja.strip()
-                    st.session_state.input_key += 1
                     st.rerun()
             else:
                 st.warning("⚠️ Digite o nome da loja/operador para continuar")
@@ -337,8 +332,6 @@ def main():
                 st.session_state.scans = []
                 st.session_state.loja_confirmada = False
                 st.session_state.nome_loja = ""
-                st.session_state.last_scan = ""
-                st.session_state.input_key += 1
                 st.rerun()
         
         st.divider()
@@ -356,8 +349,6 @@ def main():
             # Botão de nova contagem (mantém a loja)
             if st.button("🔄 Nova Contagem", use_container_width=True, type="secondary"):
                 st.session_state.scans = []
-                st.session_state.last_scan = ""
-                st.session_state.input_key += 1
                 st.rerun()
             
             st.divider()
@@ -382,44 +373,38 @@ def main():
     # SE LOJA CONFIRMADA: Mostrar área de leitura EAN
     st.header("📝 2º - Leitura de Código de Barras (EAN)")
     
-    # Container com borda destacada
-    with st.container():
-        st.markdown("**Digite o código de barras (EAN) ou use leitor:**")
-        
-        # Campo SEMPRE recriado com key única
-        col1, col2, col3 = st.columns([1, 2, 1])
-        with col2:
-            scan_input = st.text_input(
-                "Campo de Leitura EAN:",
-                placeholder="⬅️ CLIQUE AQUI E POSICIONE O LEITOR",
-                key=f"ean_input_{st.session_state.input_key}",
-                label_visibility="collapsed",
-                autocomplete="off"
-            )
+    # CAMPO SIMPLES - SEM COMPLICAÇÕES
+    st.markdown("**Digite o código de barras (EAN) ou use leitor:**")
+    
+    # Campo único e simples
+    scan_input = st.text_input(
+        "Campo de Leitura EAN:",
+        placeholder="⬅️ CLIQUE AQUI E POSICIONE O LEITOR",
+        key="ean_input",
+        label_visibility="collapsed",
+        autocomplete="off"
+    )
 
-    # Processamento IMEDIATO quando detecta 13 dígitos
+    # Processamento básico
     if scan_input and len(scan_input.strip()) == 13:
         ean_numero = scan_input.strip()
         registrar_scan(ean_numero)
-        # Incrementa a key para forçar novo campo limpo
-        st.session_state.input_key += 1
-        # Rerun IMEDIATO para recriar o campo limpo
+        # Limpa o campo manualmente fazendo rerun
         st.rerun()
 
-    # Instruções mínimas
-    if st.session_state.loja_confirmada:
-        st.info(f"""
-        **PRONTO PARA ESCANEAR - {st.session_state.nome_loja}**
-        
-        **1. Clique no campo acima UMA VEZ**
-        **2. Posicione o leitor de código de barras**
-        **3. Escaneie os produtos**
-        
-        ⚡ **Cada scan limpa automaticamente o campo**
-        🔄 **Mesmo código pode ser escaneado várias vezes**
-        """)
+    # Instruções diretas
+    st.info(f"""
+    **MODO DE USO - {st.session_state.nome_loja}:**
+    
+    1. **CLIQUE no campo acima**
+    2. **ESCANEIE os produtos**
+    3. **O sistema registra automaticamente**
+    
+    ⚡ **Aguarde o feedback após cada scan**
+    🔄 **Mesmo código pode ser escaneado várias vezes**
+    """)
 
-    # Lista de scans registrados - SÓ SE HOUVER SCANS
+    # Lista de scans registrados
     if st.session_state.scans:
         st.header("📋 Produtos Escaneados (Resumo)")
         
