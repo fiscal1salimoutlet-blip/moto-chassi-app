@@ -373,10 +373,12 @@ def main():
     # SE LOJA CONFIRMADA: Mostrar área de leitura EAN
     st.header("📝 2º - Leitura de Código de Barras (EAN)")
     
-    # CAMPO SIMPLES - SEM COMPLICAÇÕES
+    # DEBUG: Mostrar estado atual
+    st.write("🔍 **DEBUG:** Estado atual - Scans:", len(st.session_state.scans))
+    
+    # CAMPO SIMPLES
     st.markdown("**Digite o código de barras (EAN) ou use leitor:**")
     
-    # Campo único e simples
     scan_input = st.text_input(
         "Campo de Leitura EAN:",
         placeholder="⬅️ CLIQUE AQUI E POSICIONE O LEITOR",
@@ -385,23 +387,26 @@ def main():
         autocomplete="off"
     )
 
-    # Processamento básico
+    # DEBUG: Mostrar o que foi digitido
+    if scan_input:
+        st.write(f"🔍 **DEBUG:** Input recebido: '{scan_input}' - Tamanho: {len(scan_input.strip())}")
+
+    # Processamento DIRETO
     if scan_input and len(scan_input.strip()) == 13:
         ean_numero = scan_input.strip()
+        st.write(f"🔍 **DEBUG:** Processando EAN: {ean_numero}")
         registrar_scan(ean_numero)
-        # Limpa o campo manualmente fazendo rerun
         st.rerun()
 
-    # Instruções diretas
+    # Instruções
     st.info(f"""
     **MODO DE USO - {st.session_state.nome_loja}:**
     
     1. **CLIQUE no campo acima**
     2. **ESCANEIE os produtos**
-    3. **O sistema registra automaticamente**
+    3. **VERIFIQUE as mensagens abaixo**
     
     ⚡ **Aguarde o feedback após cada scan**
-    🔄 **Mesmo código pode ser escaneado várias vezes**
     """)
 
     # Lista de scans registrados
