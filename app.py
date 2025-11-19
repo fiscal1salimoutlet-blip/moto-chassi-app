@@ -30,6 +30,8 @@ if 'loja_confirmada' not in st.session_state:
     st.session_state.loja_confirmada = False
 if 'nome_loja' not in st.session_state:
     st.session_state.nome_loja = ""
+if 'campo_pronto' not in st.session_state:
+    st.session_state.campo_pronto = False
 if 'input_key' not in st.session_state:
     st.session_state.input_key = 0
 
@@ -320,7 +322,6 @@ def main():
                 if st.button("✅ CONFIRMAR LOJA", use_container_width=True, type="primary"):
                     st.session_state.loja_confirmada = True
                     st.session_state.nome_loja = nome_loja.strip()
-                    st.session_state.input_key += 1
                     st.rerun()
             else:
                 st.warning("⚠️ Digite o nome da loja/operador para continuar")
@@ -335,7 +336,7 @@ def main():
                 st.session_state.scans = []
                 st.session_state.loja_confirmada = False
                 st.session_state.nome_loja = ""
-                st.session_state.input_key += 1
+                st.session_state.campo_pronto = False
                 st.rerun()
         
         st.divider()
@@ -353,7 +354,7 @@ def main():
             # Botão de nova contagem (mantém a loja)
             if st.button("🔄 Nova Contagem", use_container_width=True, type="secondary"):
                 st.session_state.scans = []
-                st.session_state.input_key += 1
+                st.session_state.campo_pronto = False
                 st.rerun()
             
             st.divider()
@@ -378,35 +379,57 @@ def main():
     # SE LOJA CONFIRMADA: Mostrar área de leitura EAN
     st.header("📝 2º - Leitura de Código de Barras (EAN)")
     
-    # CAMPO COM KEY DINÂMICA - isso força a limpeza
-    st.markdown("**Digite o código de barras (EAN) ou use leitor:**")
+    # BOTÃO PARA PREPARAR O CAMPO
+    if not st.session_state.campo_pronto:
+        st.markdown("### 🎯 PREPARE-SE PARA ESCANEAR")
+        if st.button("🚀 INICIAR ESCANEAMENTO", 
+                    use_container_width=True, 
+                    type="primary",
+                    help="Clique aqui para preparar o campo de leitura"):
+            st.session_state.campo_pronto = True
+            st.session_state.input_key += 1
+            st.rerun()
+        
+        st.info("""
+        **INSTRUÇÕES:**
+        1. **Clique no botão acima** para preparar o campo
+        2. **Posicione o leitor** no campo que aparecerá
+        3. **Comece a escanear** os produtos
+        """)
+        return
+
+    # CAMPO DE LEITURA - SÓ APARECE QUANDO PREPARADO
+    st.success("🎯 **CAMPO PRONTO PARA ESCANEAMENTO**")
     
     scan_input = st.text_input(
         "Campo de Leitura EAN:",
-        placeholder="⬅️ CLIQUE AQUI E POSICIONE O LEITOR",
+        placeholder="🎯 POSICIONE O LEITOR AQUI E ESCANEIE",
         key=f"ean_input_{st.session_state.input_key}",
         label_visibility="collapsed",
         autocomplete="off"
     )
 
-    # Processamento com limpeza automática
+    # Processamento automático
     if scan_input and len(scan_input.strip()) == 13:
         ean_numero = scan_input.strip()
         registrar_scan(ean_numero)
-        # MUDA A KEY para forçar um campo novo e limpo
+        # Prepara para próximo scan (mantém o campo ativo)
         st.session_state.input_key += 1
         st.rerun()
 
-    # Instruções
+    # Botão para pausar escaneamento
+    if st.button("⏸️ PAUSAR ESCANEAMENTO", use_container_width=True, type="secondary"):
+        st.session_state.campo_pronto = False
+        st.rerun()
+
+    # Instruções durante escaneamento
     st.info(f"""
-    **MODO DE USO - {st.session_state.nome_loja}:**
+    **ESCANEAMENTO ATIVO - {st.session_state.nome_loja}**
     
-    1. **CLIQUE no campo acima UMA VEZ**
-    2. **ESCANEIE os produtos**
-    3. **CONTINUE escaneando** - o campo limpa sozinho
-    
-    ⚡ **Cada scan limpa automaticamente o campo**
-    🔄 **Mesmo código pode ser escaneado várias vezes**
+    ✅ **Campo pronto** - posicione o leitor e escaneie
+    ⚡ **Cada scan limpa automaticamente**
+    🔄 **Continue escaneando** - mesmo código pode ser lido várias vezes
+    ⏸️ **Use o botão acima para pausar**
     """)
 
     # Lista de scans registrados
