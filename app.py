@@ -30,6 +30,8 @@ if 'loja_confirmada' not in st.session_state:
     st.session_state.loja_confirmada = False
 if 'nome_loja' not in st.session_state:
     st.session_state.nome_loja = ""
+if 'input_key' not in st.session_state:
+    st.session_state.input_key = 0
 
 def conectar_banco():
     """Conecta ao banco Neon"""
@@ -318,6 +320,7 @@ def main():
                 if st.button("✅ CONFIRMAR LOJA", use_container_width=True, type="primary"):
                     st.session_state.loja_confirmada = True
                     st.session_state.nome_loja = nome_loja.strip()
+                    st.session_state.input_key += 1
                     st.rerun()
             else:
                 st.warning("⚠️ Digite o nome da loja/operador para continuar")
@@ -332,6 +335,7 @@ def main():
                 st.session_state.scans = []
                 st.session_state.loja_confirmada = False
                 st.session_state.nome_loja = ""
+                st.session_state.input_key += 1
                 st.rerun()
         
         st.divider()
@@ -349,6 +353,7 @@ def main():
             # Botão de nova contagem (mantém a loja)
             if st.button("🔄 Nova Contagem", use_container_width=True, type="secondary"):
                 st.session_state.scans = []
+                st.session_state.input_key += 1
                 st.rerun()
             
             st.divider()
@@ -373,40 +378,35 @@ def main():
     # SE LOJA CONFIRMADA: Mostrar área de leitura EAN
     st.header("📝 2º - Leitura de Código de Barras (EAN)")
     
-    # DEBUG: Mostrar estado atual
-    st.write("🔍 **DEBUG:** Estado atual - Scans:", len(st.session_state.scans))
-    
-    # CAMPO SIMPLES
+    # CAMPO COM KEY DINÂMICA - isso força a limpeza
     st.markdown("**Digite o código de barras (EAN) ou use leitor:**")
     
     scan_input = st.text_input(
         "Campo de Leitura EAN:",
         placeholder="⬅️ CLIQUE AQUI E POSICIONE O LEITOR",
-        key="ean_input",
+        key=f"ean_input_{st.session_state.input_key}",
         label_visibility="collapsed",
         autocomplete="off"
     )
 
-    # DEBUG: Mostrar o que foi digitido
-    if scan_input:
-        st.write(f"🔍 **DEBUG:** Input recebido: '{scan_input}' - Tamanho: {len(scan_input.strip())}")
-
-    # Processamento DIRETO
+    # Processamento com limpeza automática
     if scan_input and len(scan_input.strip()) == 13:
         ean_numero = scan_input.strip()
-        st.write(f"🔍 **DEBUG:** Processando EAN: {ean_numero}")
         registrar_scan(ean_numero)
+        # MUDA A KEY para forçar um campo novo e limpo
+        st.session_state.input_key += 1
         st.rerun()
 
     # Instruções
     st.info(f"""
     **MODO DE USO - {st.session_state.nome_loja}:**
     
-    1. **CLIQUE no campo acima**
+    1. **CLIQUE no campo acima UMA VEZ**
     2. **ESCANEIE os produtos**
-    3. **VERIFIQUE as mensagens abaixo**
+    3. **CONTINUE escaneando** - o campo limpa sozinho
     
-    ⚡ **Aguarde o feedback após cada scan**
+    ⚡ **Cada scan limpa automaticamente o campo**
+    🔄 **Mesmo código pode ser escaneado várias vezes**
     """)
 
     # Lista de scans registrados
